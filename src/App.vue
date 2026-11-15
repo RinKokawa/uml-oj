@@ -124,7 +124,7 @@ onBeforeUnmount(() => editor.value?.destroy())
   <div class="app-shell">
     <header class="topbar">
       <a class="brand" href="#"><span class="brand-mark">U</span><span>UML <b>OJ</b></span></a>
-      <div class="top-meta"><span class="live-dot"></span> 本地练习 · 无需登录 <span class="version">PREVIEW 0.4</span></div>
+      <div class="top-meta"><span class="live-dot"></span> 本地练习 · 无需登录 <span class="version">本地预览版</span></div>
     </header>
     <nav class="section-nav" aria-label="练习分区">
       <button :class="{ active: section === 'tutorial' }" :aria-current="section === 'tutorial' ? 'page' : undefined" @click="switchSection('tutorial')">教学关卡 <span>从零学习 · {{ lessons.length }} 关</span></button>
@@ -160,7 +160,7 @@ onBeforeUnmount(() => editor.value?.destroy())
       </aside>
       <section class="workspace">
         <div class="workspace-head">
-          <div><div class="eyebrow">YOUR SOLUTION</div><h2>建模工作区</h2></div>
+          <div><div class="eyebrow">当前答案</div><h2>建模工作区</h2></div>
           <div class="toolbar">
             <button class="secondary" @click="switchMode">{{ sourceMode ? '切换到可视化绘图' : 'PlantUML 源码模式' }}</button>
             <button class="secondary" @click="exportJson">导出提交</button>
@@ -168,7 +168,7 @@ onBeforeUnmount(() => editor.value?.destroy())
           </div>
         </div>
         <section v-if="problem.lesson" :key="problem.id" class="lesson-card">
-          <div class="eyebrow">LEARN BY DOING · 一次只学一个知识点</div>
+          <div class="eyebrow">教学关卡</div>
           <h3>先看懂，再动手</h3>
           <p>{{ problem.lesson.concept }}</p>
           <ol><li v-for="step in problem.lesson.steps" :key="step">{{ step }}</li></ol>
@@ -193,7 +193,7 @@ Example "1" -- "0..*" OtherExample</pre>
         <section v-if="error" class="results error-report" role="alert"><h2>INPUT ERROR</h2><pre>{{ error }}</pre></section>
         <section v-if="results" class="results" aria-live="polite">
           <div class="result-head">
-            <div><div class="eyebrow">JUDGE REPORT</div><h2>{{ problem.title }} · 评测报告</h2></div>
+            <div><div class="eyebrow">评测结果</div><h2>{{ problem.title }} · 评测报告</h2></div>
             <div class="score"><strong>{{ passed }}/{{ results.length }}</strong><span>测试通过</span></div>
           </div>
           <div v-for="r in results" :key="r.id" class="result-row">
@@ -210,6 +210,6 @@ Example "1" -- "0..*" OtherExample</pre>
         </section>
       </section>
     </main>
-    <footer>UML OJ · TEST YOUR MODEL, NOT YOUR MEMORY <span>Powered by Apollon · MIT</span></footer>
+    <footer><span>UML OJ · UML 建模练习</span><span>绘图组件：Apollon（MIT）</span></footer>
   </div>
 </template>
