@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@tumaet/apollon": "5.5.0",
+    "plantuml-parser": "^1.4.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "vue": "^3.5.24"
