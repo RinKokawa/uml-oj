@@ -41,7 +41,7 @@ function parsePlantUmlSubset(text: string) {
   const classes = elements.filter((e:any) => typeof e.name === 'string' && Array.isArray(e.members))
     .map((e:any) => ({
       name: e.name,
-      attributes: (e.members ?? []).filter((m:any) => !String(m.title ?? '').includes('(')).map((m:any) => String(m.title ?? m.name ?? '')),
+      attributes: (e.members ?? []).filter((m:any) => !String(m.title ?? '').includes('(')).map((m:any) => String(m.title ?? m.name ?? '').replace(/^[-+#~]\\s*/, '').split(':')[0].trim()),
     }))
   const relations = elements.filter((e:any) => typeof e.left === 'string' && typeof e.right === 'string')
     .map((e:any) => ({source:e.left, target:e.right, label:e.label ?? '', arrow:e.leftArrowHead + e.leftArrowBody + e.rightArrowBody + e.rightArrowHead}))
