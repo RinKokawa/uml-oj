@@ -3,6 +3,7 @@ import { onBeforeUnmount, onMounted, ref, computed } from 'vue'
 import { ApollonEditor, UMLDiagramType } from '@tumaet/apollon'
 import type { UMLModel } from '@tumaet/apollon'
 import '@tumaet/apollon/style.css'
+import { parse as parsePlantUML } from 'plantuml-parser'
 
 type TestResult = { id: string; title: string; passed: boolean; detail: string }
 const host = ref<HTMLDivElement | null>(null)
@@ -33,19 +34,17 @@ function getModel(): any {
 // A deliberately small, transparent PlantUML subset for this first playable exercise.
 // Unsupported syntax is reported rather than silently accepted.
 function parsePlantUmlSubset(text: string) {
-  const classes: Array<{name:string; attributes:string[]}> = []
-  const relations: Array<{source:string; target:string; label:string; multiplicity:string; arrow:string}> = []
-  const lines = text.split(/\r?\n/)
-  let current: {name:string; attributes:string[]} | null = null
-  for (const raw of lines) {
-    const line = raw.trim()
-    if (!line || line.startsWith("'") || line.startsWith('@') || line === '}') { if (line === '}') current = null; continue }
-    const decl = line.match(/^(?:abstract\s+)?class\s+([\w.]+)\s*(\{)?$/)
-    if (decl) { current = {name:decl[1], attributes:[]}; classes.push(current); continue }
-    if (current && !line.includes('--') && !line.includes('<|') && !line.includes('..>')) { current.attributes.push(line.replace(/^[-+#~]\s*/, '').split(':')[0].trim()); continue }
-    const rel = line.match(/^(\w+)\s+(?:"([^"]+)"\s*)?(<\|--|--\|>|\*--|--\*|o--|--o|\.\.>|--|\.\.)(?:\s*"([^"]+)"\s*)?\s+(\w+)(?:\s*:\s*(.+))?$/)
-    if (rel) relations.push({source:rel[1], multiplicity:rel[2] ?? '', arrow:rel[3], label:rel[6] ?? '', target:rel[5]})
-  }
+  // Parse with the existing open-source PEG parser instead of maintaining a private
+  // PlantUML grammar. This adapter intentionally targets class-diagram elements.
+  const parsed = parsePlantUML(text) as any[]
+  const elements = parsed.flatMap((diagram:any) => diagram.elements ?? [])
+  const classes = elements.filter((e:any) => typeof e.name === 'string' && Array.isArray(e.members))
+    .map((e:any) => ({
+      name: e.name,
+      attributes: (e.members ?? []).filter((m:any) => !String(m.title ?? '').includes('(')).map((m:any) => String(m.title ?? m.name ?? '')),
+    }))
+  const relations = elements.filter((e:any) => typeof e.left === 'string' && typeof e.right === 'string')
+    .map((e:any) => ({source:e.left, target:e.right, label:e.label ?? '', arrow:e.leftArrowHead + e.leftArrowBody + e.rightArrowBody + e.rightArrowHead}))
   return { classes, relations, raw:text }
 }
 
