@@ -6,16 +6,19 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vue-tsc -b && vite build",
-    "preview": "vite preview --host 0.0.0.0"
+    "preview": "vite preview --host 0.0.0.0",
+    "test": "node --experimental-strip-types --test tests/*.test.mjs",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@tumaet/apollon": "5.5.0",
-    "plantuml-parser": "^1.4.0",
+    "plantuml-parser": "^0.4.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "vue": "^3.5.24"
   },
   "devDependencies": {
+    "@playwright/test": "^1.65.1",
     "@vitejs/plugin-vue": "^6.0.1",
     "typescript": "~5.9.3",
     "vite": "^7.2.2",
