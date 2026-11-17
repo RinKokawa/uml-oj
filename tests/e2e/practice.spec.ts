@@ -6,6 +6,7 @@ test('both exercises can be solved; reports, drafts and editor survive switching
   page.on('pageerror', e => errors.push(e.message))
   await page.goto('/')
   await page.getByRole('button', { name: /正式挑战/ }).click()
+  await page.getByRole('button', { name: '开始作答：项目管理系统' }).click()
   await page.getByRole('button', { name: '切换到可视化绘图' }).click()
   await expect(page.locator('.editor-host .react-flow')).toBeVisible()
   await page.getByRole('button', { name: 'PlantUML 源码模式' }).click()

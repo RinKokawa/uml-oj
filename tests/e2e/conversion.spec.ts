@@ -14,6 +14,7 @@ test('source generates real editable nodes; canvas edits round-trip to PlantUML'
   const errors: string[] = []
   page.on('pageerror', e => errors.push(e.message))
   await page.goto('/')
+  await page.getByRole('button', { name: '开始学习：第 1 关：认识类' }).click()
   const source = page.getByRole('textbox', { name: 'PlantUML source' })
   await source.fill(sourceText)
   await page.getByRole('button', { name: '切换到可视化绘图' }).click()
@@ -46,6 +47,7 @@ test('source generates real editable nodes; canvas edits round-trip to PlantUML'
 
 test('unsupported source blocks switching without overwriting source or canvas', async ({ page }) => {
   await page.goto('/')
+  await page.getByRole('button', { name: '开始学习：第 1 关：认识类' }).click()
   const source = page.getByRole('textbox', { name: 'PlantUML source' })
   await source.fill(sourceText)
   await page.getByRole('button', { name: '切换到可视化绘图' }).click()

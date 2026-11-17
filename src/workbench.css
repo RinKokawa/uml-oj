@@ -1,0 +1,81 @@
+/* Focused problem workspace: a scrollable statement beside a persistent
+   editor and an expandable result panel. Catalog styles stay independent. */
+.problem-panel { display: flex; flex-direction: column; padding: 0; }
+.problem-bar { min-height: 40px; padding: 0 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; border-bottom: 1px solid var(--line); background: #f4f6f4; color: var(--ink); font-size: 12px; font-weight: 700; }
+.problem-bar .back-to-catalog { margin: 0; font-size: 11px; white-space: nowrap; }
+.panel-icon { color: #217dbb; font-weight: 700; }
+.problem-scroll { min-height: 0; padding: 18px 20px 24px; overflow: auto; overscroll-behavior: contain; }
+.panel-resizer { display: grid; place-items: center; cursor: col-resize; touch-action: none; }
+.panel-resizer span { width: 3px; height: 36px; border-radius: 3px; background: #aebcb1; opacity: .55; }
+.panel-resizer:hover span, .panel-resizer:focus-visible span { background: #217dbb; opacity: 1; }
+.workspace-head { flex: none; }
+.editor-toolbar { flex: none; }
+.feedback-anchor { flex: none; min-height: 40px; padding: 0; border-top: 1px solid var(--line); background: #f6f8f6; }
+.feedback-anchor.expanded { display: flex; flex-direction: column; }
+.feedback-toggle { min-height: 40px; width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 16px; border: 0; background: transparent; color: var(--ink); text-align: left; font-size: 12px; font-weight: 700; }
+.feedback-toggle:hover { background: #edf2ed; }
+.feedback-summary, .feedback-empty { margin-left: 9px; font-size: 11px; font-weight: 500; }
+.feedback-empty { color: var(--muted); }
+.feedback-summary.ok { color: var(--good); }
+.feedback-summary.fail { color: var(--bad); }
+.feedback-content { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 0 16px 16px; }
+.feedback-placeholder { margin: 6px 0; color: var(--muted); font-size: 12px; }
+.feedback-content .results { margin-top: 0; }
+.statusbar { flex: none; }
+.statusbar > span:nth-child(2) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.toolbar button:disabled { cursor: not-allowed; opacity: .55; }
+.drawio-trial { display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; background: #fff; }
+.drawio-notice { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; padding: 8px 12px; color: #40554a; background: #f4f8fc; border-bottom: 1px solid var(--line); font-size: 11px; line-height: 1.5; }
+.drawio-notice > span { flex: 1 1 230px; }
+.drawio-download { display: inline-flex; align-items: center; gap: 5px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 4px; background: transparent; color: var(--ink); white-space: nowrap; font-size: 11px; }
+.drawio-frame-wrap { position: relative; flex: 1; min-height: 0; }
+.drawio-frame-wrap iframe { width: 100%; height: 100%; display: block; border: 0; }
+.drawio-frame-wrap.is-busy iframe { pointer-events: none; }
+.drawio-loading { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; text-align: center; color: var(--ink); background: #f4f6f4; font-size: 13px; }
+.drawio-loading p { max-width: 380px; color: var(--muted); line-height: 1.7; }
+.drawio-loading a { display: inline-flex; align-items: center; gap: 4px; color: #217dbb; }
+.drawio-status { padding: 6px 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; }
+.drawio-status.drawio-error { color: var(--bad); }
+html[data-theme="dark"] .drawio-trial { background: #1d2025; }
+html[data-theme="dark"] .drawio-notice { background: #202b36; color: #d0dce6; }
+html[data-theme="dark"] .drawio-loading { background: #1d2025; }
+html[data-theme="dark"] .drawio-loading a { color: #54b4ef; }
+@media (min-width: 761px) {
+  .app-shell.in-workspace { height: 100dvh; min-height: 0; overflow: hidden; }
+  .in-workspace .topbar { flex: none; }
+  .in-workspace .layout { min-height: 0; height: 0; grid-template-columns: minmax(280px, var(--problem-width, 44%)) 8px minmax(0, 1fr); align-items: stretch; gap: 0; padding: 8px 10px; }
+  .in-workspace .layout.problem-collapsed { grid-template-columns: minmax(0, 1fr); }
+  .in-workspace .problem-panel { position: static; max-height: none; height: 100%; overflow: hidden; }
+  .in-workspace .workspace { height: 100%; min-height: 0; }
+  .in-workspace .workspace-head { min-height: 48px; padding: 6px 12px; }
+  .in-workspace .toolbar button { min-height: 34px; padding: 6px 10px; }
+  .in-workspace .editor-toolbar { min-height: 46px; padding: 4px 12px; }
+  .in-workspace .source-label { min-height: 32px; padding: 8px 16px; }
+  .in-workspace .source-wrap textarea { padding: 14px 18px; }
+  .in-workspace .source-note { padding: 6px 16px; }
+  .in-workspace .statusbar { min-height: 32px; padding: 6px 16px; }
+  .in-workspace .editor-host, .in-workspace .source-wrap { flex: 1 1 0; height: 0; min-height: 0; }
+  .in-workspace .feedback-anchor.expanded { flex: 0 0 clamp(170px, 32%, 330px); min-height: 0; }
+}
+@media (max-width: 760px) {
+  .problem-panel { padding: 0; }
+  .problem-scroll { overflow: visible; padding: 16px 18px 22px; }
+  .panel-resizer { display: none !important; }
+  .feedback-anchor.expanded { max-height: 55vh; }
+  .feedback-content { overflow: auto; }
+  .statusbar > span:nth-child(2) { white-space: normal; }
+  .drawio-trial { flex: none; height: 70vh; min-height: 440px; }
+}
+@media (max-width: 520px) {
+  .sync-indicator { font-size: 0; gap: 0; }
+  .mode-switch button { gap: 3px; padding-inline: 5px; font-size: 11px; }
+  .mode-switch button .app-icon { width: 14px; height: 14px; }
+}
+html[data-theme="dark"] .problem-bar { border-color: #3a3d42; background: #1d2025; }
+html[data-theme="dark"] .panel-resizer span { background: #555b63; }
+html[data-theme="dark"] .panel-resizer:hover span, html[data-theme="dark"] .panel-resizer:focus-visible span { background: #3498db; }
+html[data-theme="dark"] .feedback-anchor { border-color: #3a3d42; background: #1d2025; }
+html[data-theme="dark"] .feedback-toggle { color: #eee; }
+html[data-theme="dark"] .feedback-toggle:hover { background: #292e34; }
+html[data-theme="dark"] .feedback-empty { color: #a7a9ad; }
+html[data-theme="dark"] .panel-icon { color: #3498db; }

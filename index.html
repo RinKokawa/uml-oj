@@ -1,7 +1,13 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      try {
+        var theme = localStorage.getItem('uml-oj-theme');
+        document.documentElement.dataset.theme = theme === 'light' ? 'light' : 'dark';
+      } catch (_) { /* Default to dark when storage is unavailable. */ }
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#111827" />
     <meta name="description" content="UML OJ — 用测试用例练习 UML 建模" />

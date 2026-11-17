@@ -11,6 +11,7 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@lucide/vue": "1.73.0",
     "@tumaet/apollon": "5.5.0",
     "plantuml-parser": "^0.4.0",
     "react": "^19.2.0",
