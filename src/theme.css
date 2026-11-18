@@ -83,26 +83,8 @@ html[data-theme="dark"] .mode-switch { border-color: #3a3d42; border-radius: 4px
 html[data-theme="dark"] .mode-switch button { border-radius: 3px; color: #bfc1c5; }
 html[data-theme="dark"] .mode-switch button:hover { color: #fff; }
 html[data-theme="dark"] .mode-switch button.active { background: #303339; color: #f5f5f5; box-shadow: none; }
-html[data-theme="dark"] .palette-toggle { border-color: #4a4d52; border-radius: 3px; background: #1d2025; color: #d9d9d9; }
-html[data-theme="dark"] .palette-toggle:hover { border-color: #3498db; background: #292e34; }
 html[data-theme="dark"] .sync-indicator { color: #a9abb0; }
 html[data-theme="dark"] .sync-indicator .app-icon { color: #3498db; }
-html[data-theme="dark"] .editor-host {
-  color: #f5f5f5; background: #1d2025;
-  --apollon-primary: #217dbb;
-  --apollon-primary-foreground: #fff;
-  --apollon-foreground: #f5f5f5;
-  --apollon-background: #1d2025;
-  --apollon-background-variant: #24272c;
-  --apollon-surface: #24272c;
-  --apollon-surface-sunken: #191c21;
-  --apollon-gray: #303339;
-  --apollon-gray-variant: #4a4d52;
-  --apollon-grid: #34383e;
-  --apollon-border: #4a4d52;
-  --apollon-border-subtle: #3a3d42;
-  --apollon-radius: 4px;
-}
 html[data-theme="dark"] .source-wrap { background: #1d2025; }
 html[data-theme="dark"] .source-label { border-color: #3a3d42; background: #1d2025; color: #a7a9ad; }
 html[data-theme="dark"] .source-label span:first-child { color: #cfd0d2; }

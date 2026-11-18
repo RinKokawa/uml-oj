@@ -5,6 +5,7 @@ export type Problem = {
   description: string
   requirements: string[]
   classes: { name: string; attributes: string[] }[]
+  interfaces?: { name: string; methods: string[] }[]
   relations: [string, string, string | null, string | null][]
   hint: string
   lesson?: {
@@ -26,7 +27,7 @@ export const problems: Problem[] = [
     hint: 'class 后面是类名。Student 是题目指定的英文名，不要写成中文。',
     lesson: {
       concept: 'class 类名：声明一种事物。@startuml 和 @enduml 是源码的开始与结束标记。',
-      steps: ['推荐先用源码模式：找到 class Example。', '把 Example 改成 Student，保留其他内容。', '点击“提交评测”，看到通过后进入下一关。画布模式也可以：从左侧类图工具栏添加 Class，再编辑名称。'],
+      steps: ['在源码中将 Example 改成 Student。', '也可以点击画布中的 Example，在编辑面板将类名改为 Student，再点击“应用更改”。', '点击“提交评测”，看到通过后进入下一关。'],
       example: 'class Car',
       starter: '@startuml\nclass Example\n@enduml',
       solution: '@startuml\nclass Student\n@enduml',
@@ -41,7 +42,7 @@ export const problems: Problem[] = [
     hint: '在注释下方添加一行 - name: String。前面的减号表示私有属性，本关不检查可见性。',
     lesson: {
       concept: '属性的写法是“名称: 类型”。例如 color: String 表示一个文本类型的颜色。减号 - 表示私有；没有圆括号的是属性。',
-      steps: ['类已经替你建好，只需补全一行属性。', '在花括号中，把注释下方的空行补成姓名属性；格式可参考下面的汽车颜色。', '画布模式：创建 Student 类，在属性区域添加 name: String，然后提交。'],
+      steps: ['类已经替你建好，只需添加姓名属性。', '在源码花括号中添加 - name: String。', '也可以点击画布中的 Student，选择“添加属性”，填写名称 name、类型 String，再点击“应用更改”。'],
       example: 'class Car {\n  - color: String\n}',
       starter: '@startuml\nclass Student {\n  \' TODO：在下面添加姓名属性 name，类型为 String\n\n}\n@enduml',
       solution: '@startuml\nclass Student {\n  - name: String\n}\n@enduml',
@@ -57,7 +58,7 @@ export const problems: Problem[] = [
     hint: '在两个类声明后，添加 Student -- Course。这里是两个减号，不是继承箭头，也不要用星号或菱形。',
     lesson: {
       concept: 'A -- B 表示 A 与 B 有普通关联。连线不是属性，应该写在类声明外。',
-      steps: ['模板中已经声明了两个类，不用重复创建。', '在 TODO 下方加一行“类名 -- 类名”，把这两个类连接起来。', '画布模式：先创建两个类，再选择普通关联线连接它们；本关无需多重性。'],
+      steps: ['模板中已经声明了两个类，不用重复创建。', '在 TODO 下方加一行 Student -- Course。', '也可以点击画布的“添加关联”，选择起点和终点并应用；本关无需多重性。'],
       example: 'class Customer\nclass Order\nCustomer -- Order',
       starter: '@startuml\nclass Student\nclass Course\n\' TODO：在下面连接学生和课程\n\n@enduml',
       solution: '@startuml\nclass Student\nclass Course\nStudent -- Course\n@enduml',
@@ -73,11 +74,56 @@ export const problems: Problem[] = [
     hint: '读法：站在 Student 看 Classroom，只能属于 1 个班级，所以 1 写在 Classroom 旁；站在 Classroom 看 Student，可以有 0..* 个学生，所以 0..* 写在 Student 旁。',
     lesson: {
       concept: '1 表示恰好一个，0..* 表示零到任意多个。某一端旁边的数字，表示对面一个对象能关联多少个这一端的对象。',
-      steps: ['模板已给出普通关联，只修改双引号中的两个问号。', 'Classroom 旁填 1，Student 旁填 0..*。', '画布模式：选中普通关联，在两端的多重性（Multiplicity）处填写对应数值。不要把数字填进类名或关系名称。'],
+      steps: ['源码方式：将双引号中的两个问号分别改为 1 和 0..*。', '画布方式：点击 Classroom 和 Student 之间的连线，填写 Classroom 端多重性 1 和 Student 端多重性 0..*。', '点击“应用更改”，再提交评测；不要把数字填进类名或关系名称。'],
       example: '\' 一位作者可以写多篇文章，每篇文章只有一位作者\nAuthor "1" -- "0..*" Article',
       starter: '@startuml\nclass Classroom\nclass Student\nClassroom "?" -- "?" Student\n@enduml',
       solution: '@startuml\nclass Classroom\nclass Student\nClassroom "1" -- "0..*" Student\n@enduml',
-      takeaway: '教学关卡完成！你已学会类、属性、普通关联和一对多，可以尝试项目管理系统综合练习了。',
+      takeaway: '你已学会类、属性、普通关联和一对多。接下来认识接口。',
+    },
+  },
+  {
+    id: 'learn-interface', title: '第 5 关：认识接口', level: '教学 · 2 分钟',
+    description: '接口描述一种能力的约定，例如可打印。它不是普通类；这一关先创建接口，不需要连线。',
+    requirements: ['创建一个名为 Printable 的接口。', '接口名必须是 Printable；普通类不能代替接口。'],
+    classes: [], interfaces: [{ name: 'Printable', methods: [] }], relations: [],
+    hint: '源码可以使用 interface Printable；画布中可以添加接口，或点击已有接口修改名称。',
+    lesson: {
+      concept: '接口用于描述能力或操作的约定。类图中可用带 «interface» 标记的矩形表示接口。',
+      steps: ['点击画布中的 Example 接口，在属性面板将接口名改为 Printable。', '点击“应用更改”，然后提交评测。', '也可以将 PlantUML 源码中的 interface Example 改为 interface Printable。'],
+      example: 'interface Readable',
+      starter: '@startuml\ninterface Example\n@enduml',
+      solution: '@startuml\ninterface Printable\n@enduml',
+      takeaway: '你已经能创建接口，下一关为接口添加方法。',
+    },
+  },
+  {
+    id: 'learn-interface-method', title: '第 6 关：接口的方法', level: '教学 · 3 分钟',
+    description: '支付能力可以用 Payable 接口描述。接口中的方法说明它提供什么操作。',
+    requirements: ['保留 Payable 接口。', '添加名为 pay 的方法。可选填参数 amount 和返回类型 Boolean；本关只检查方法名称。'],
+    classes: [], interfaces: [{ name: 'Payable', methods: ['pay'] }], relations: [],
+    hint: '在接口的属性面板选择“添加方法”，填写方法名称 pay；不要把 pay 写成属性。',
+    lesson: {
+      concept: '方法带有圆括号，例如 pay(amount: Money): Boolean。方法名称、参数与返回类型分别描述操作及其输入输出。',
+      steps: ['点击 Payable 接口，选择“添加方法”。', '填写方法名称 pay；也可以添加 amount 参数及 Boolean 返回类型。', '点击“应用更改”，然后提交评测。'],
+      example: 'interface Payable {\n  + pay(amount: Money): Boolean\n}',
+      starter: '@startuml\ninterface Payable\n@enduml',
+      solution: '@startuml\ninterface Payable {\n  + pay(amount: Money): Boolean\n}\n@enduml',
+      takeaway: '接口可以包含多个操作；下一关练习创建多个接口。',
+    },
+  },
+  {
+    id: 'learn-multiple-interfaces', title: '第 7 关：多个接口', level: '教学 · 4 分钟',
+    description: '一个系统可能需要多种能力。分别用接口描述搜索和导出，不需要绘制实现关系。',
+    requirements: ['保留 Searchable 接口，添加 search 方法。', '新建 Exportable 接口，添加 export 方法。', '本关检查接口和方法名称，不检查参数、返回类型或可见性。'],
+    classes: [], interfaces: [{ name: 'Searchable', methods: ['search'] }, { name: 'Exportable', methods: ['export'] }], relations: [],
+    hint: '分别编辑 Searchable 和 Exportable 的方法列表；两个接口不能用普通类替代。',
+    lesson: {
+      concept: '不同接口可以分别表达不同能力。当前练习只创建接口及其操作，不要求类实现接口。',
+      steps: ['点击 Searchable 接口并添加 search 方法，应用更改。', '点击“添加接口”，将新接口命名为 Exportable，添加 export 方法并应用。', '提交评测；无需绘制连线。'],
+      example: 'interface Searchable {\n  + search()\n}\ninterface Exportable {\n  + export()\n}',
+      starter: '@startuml\ninterface Searchable\n@enduml',
+      solution: '@startuml\ninterface Searchable {\n  + search()\n}\ninterface Exportable {\n  + export()\n}\n@enduml',
+      takeaway: '你已学会创建接口及方法。类如何实现接口，将在后续关系功能中练习。',
     },
   },
   {

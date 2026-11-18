@@ -1,0 +1,30 @@
+import { expect, test } from '@playwright/test'
+
+test('desktop shows both panes; mobile switches views without losing pending edits', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/')
+  await page.getByRole('button', { name: '开始学习：第 1 关：认识类' }).click()
+  await expect(page.getByRole('group', { name: '编辑方式' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '编辑类 Example' })).toBeVisible()
+  await expect(page.getByRole('textbox', { name: 'PlantUML source' })).toBeVisible()
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  const code = page.getByRole('button', { name: '源码模式' })
+  const canvas = page.getByRole('button', { name: '画布模式' })
+  await expect(code).toBeVisible()
+  await expect(canvas).toBeVisible()
+  await canvas.click()
+  await page.getByRole('button', { name: '编辑类 Example' }).click()
+  await page.getByLabel('类名', { exact: true }).fill('Student')
+  await code.click()
+  await expect(page.locator('.error-report')).toContainText('请先应用或撤销')
+  await expect(page.getByLabel('类名', { exact: true })).toHaveValue('Student')
+  await page.getByRole('button', { name: '应用更改' }).click()
+  await code.click()
+  await expect(page.getByRole('textbox', { name: 'PlantUML source' })).toHaveValue(/class Student/)
+
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await expect(page.getByRole('group', { name: '编辑方式' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '编辑类 Student' })).toBeVisible()
+  await expect(page.getByRole('textbox', { name: 'PlantUML source' })).toBeVisible()
+})

@@ -1,4 +1,6 @@
 import { expect, test } from '@playwright/test'
+import { installDrawio } from './fixture'
+test.beforeEach(async ({ page }) => installDrawio(page))
 
 test('UI uses decorative Lucide SVGs while controls keep their accessible names', async ({ page }) => {
   await page.goto('/')
@@ -13,13 +15,14 @@ test('UI uses decorative Lucide SVGs while controls keep their accessible names'
   await expect(enter.locator('svg.lucide-arrow-right')).toBeVisible()
   await enter.click()
   await expect(page.getByRole('button', { name: '返回教学关卡', exact: true }).locator('svg.lucide-arrow-left')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'PlantUML 源码模式', exact: true }).locator('svg.lucide-code-xml')).toBeVisible()
-  await expect(page.getByRole('button', { name: '切换到可视化绘图', exact: true }).locator('svg.lucide-network')).toBeVisible()
+  await expect(page.getByRole('group', { name: '编辑方式' })).toHaveCount(0)
 
   const submit = page.getByRole('button', { name: '提交评测', exact: true })
+  await expect(page.locator('.statusbar')).toContainText('已同步')
   await expect(submit.locator('svg.lucide-play')).toBeVisible()
   await submit.click()
   await expect(page.locator('.result-icon svg.lucide-x')).toBeVisible()
+  await page.getByRole('textbox', { name: 'PlantUML source' }).click()
   await page.getByRole('textbox', { name: 'PlantUML source' }).fill('@startuml\nclass Student\n@enduml')
   await submit.click()
   await expect(page.locator('.result-icon svg.lucide-check')).toBeVisible()
@@ -53,6 +56,8 @@ test('SVG disclosure indicators follow keyboard toggles and fit narrow layouts i
   await page.setViewportSize({ width: 320, height: 740 })
   await page.goto('/')
   await page.getByRole('button', { name: '开始学习：第 1 关：认识类', exact: true }).click()
+  await expect(page.getByRole('button', { name: '源码模式', exact: true }).locator('svg.lucide-code-xml')).toBeVisible()
+  await expect(page.getByRole('button', { name: '画布模式', exact: true }).locator('svg.lucide-network')).toBeVisible()
   const guide = page.getByRole('button', { name: '知识讲解与操作步骤', exact: true })
   await expect(guide.locator('svg.lucide-chevron-up')).toBeVisible()
   await guide.click()

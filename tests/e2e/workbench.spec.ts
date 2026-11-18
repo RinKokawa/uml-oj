@@ -1,4 +1,6 @@
 import { expect, test } from '@playwright/test'
+import { installDrawio } from './fixture'
+test.beforeEach(async ({ page }) => installDrawio(page))
 
 test('desktop uses a focused workbench with independently scrollable statement and results', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 })
@@ -35,16 +37,16 @@ test('splitter adjusts statement width by keyboard and pointer without losing so
   await page.getByRole('button', { name: '开始学习：第 1 关：认识类' }).click()
   const separator = page.getByRole('separator', { name: '调整题面宽度' })
   const source = page.getByRole('textbox', { name: 'PlantUML source' })
-  await source.fill('@startuml\nclass Example\n@enduml')
-  await expect(separator).toHaveAttribute('aria-valuenow', '44')
+  await source.click(); await expect(source).toBeEditable(); await source.fill('@startuml\nclass Example\n@enduml')
+  await expect(separator).toHaveAttribute('aria-valuenow', '32')
   await separator.focus()
   await page.keyboard.press('ArrowRight')
-  await expect(separator).toHaveAttribute('aria-valuenow', '46')
+  await expect(separator).toHaveAttribute('aria-valuenow', '34')
   const box = (await separator.boundingBox())!
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
   await page.mouse.down()
   await page.mouse.move(box.x + box.width / 2 - 100, box.y + box.height / 2, { steps: 5 })
   await page.mouse.up()
-  expect(Number(await separator.getAttribute('aria-valuenow'))).toBeLessThan(46)
+  expect(Number(await separator.getAttribute('aria-valuenow'))).toBeLessThan(34)
   await expect(source).toHaveValue('@startuml\nclass Example\n@enduml')
 })

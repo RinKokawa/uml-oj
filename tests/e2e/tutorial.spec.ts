@@ -1,4 +1,6 @@
 import { expect, test } from '@playwright/test'
+import { installDrawio } from './fixture'
+test.beforeEach(async ({ page }) => installDrawio(page))
 import { problems } from '../../src/problems'
 
 test('tutorials teach one step at a time and advance without losing drafts', async ({ page }) => {
@@ -11,11 +13,12 @@ test('tutorials teach one step at a time and advance without losing drafts', asy
   for (let i = 0; i < lessons.length; i++) {
     const p = lessons[i]
     await expect(page.getByRole('heading', { name: p.title, exact: true })).toBeVisible()
+    await expect(page.locator('.statusbar')).toContainText('已同步')
     await page.getByRole('button', { name: '提交评测' }).click()
     await expect(page.locator('.verdict')).toContainText('再试一下')
     await page.getByRole('button', { name: '查看参考答案' }).click()
     await expect(page.locator('.lesson-solution')).toContainText(p.lesson!.solution)
-    await source.fill(p.lesson!.solution)
+    await source.click(); await expect(source).toBeEditable(); await source.fill(p.lesson!.solution)
     await page.getByRole('button', { name: '提交评测' }).click()
     await expect(page.locator('.verdict')).toContainText('本关通过')
     await expect(page.getByRole('progressbar', { name: '教学进度' })).toHaveAttribute('value', String(i + 1))
@@ -26,14 +29,14 @@ test('tutorials teach one step at a time and advance without losing drafts', asy
   }
   await expect(page.getByText('全部教学已完成。')).toBeVisible()
   await expect(page.getByRole('button', { name: '进入下一关' })).toHaveCount(0)
-  await expect(page.getByLabel('选择教学关卡').locator('option')).toHaveCount(4)
+  await expect(page.getByLabel('选择教学关卡').locator('option')).toHaveCount(lessons.length)
   await page.getByRole('button', { name: /正式挑战/ }).click()
   await expect(page.getByRole('heading', { name: '正式题库', exact: true })).toBeVisible()
   await page.getByRole('button', { name: '开始作答：项目管理系统' }).click()
   await expect(page.getByLabel('选择正式关卡').locator('option')).toHaveCount(2)
   await expect(page.locator('.lesson-card')).toHaveCount(0)
   await expect(page.getByRole('progressbar', { name: '教学进度' })).toHaveCount(0)
-  await source.fill('@startuml\nclass Draft\n@enduml')
+  await source.click(); await expect(source).toBeEditable(); await source.fill('@startuml\nclass Draft\n@enduml')
   await page.getByLabel('选择正式关卡').selectOption('library-loans')
   await page.getByRole('button', { name: /教学关卡/ }).click()
   await page.getByRole('button', { name: `开始学习：${lessons[3].title}` }).click()

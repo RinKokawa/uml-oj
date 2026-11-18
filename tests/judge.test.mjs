@@ -1,6 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { fromPlantUml, fromVisual, judge } from '../src/judge.ts'
+import { fromDiagram, judge } from '../src/judge.ts'
+import { parsePlantUml } from '../src/uml/adapters/plantuml.ts'
+const fromPlantUml = text => fromDiagram(parsePlantUml(text))
 import { problems, emptySource } from '../src/problems.ts'
 
 function answer(problem) {
@@ -10,13 +12,6 @@ for (const problem of problems.filter(p => !p.lesson)) {
   test(`${problem.id}: correct source passes, empty source fails`, () => {
     assert.ok(judge(fromPlantUml(answer(problem)), problem).every(r => r.passed))
     assert.ok(judge(fromPlantUml(emptySource), problem).every(r => !r.passed))
-  })
-  test(`${problem.id}: visual adapter agrees with source`, () => {
-    const visual = {
-      nodes: problem.classes.map(c => ({ id: c.name, type: 'class', data: { name: c.name, attributes: c.attributes.map(a => ({ name: `- ${a}: String` })) } })),
-      edges: problem.relations.map(([source,target,sourceMultiplicity,targetMultiplicity]) => ({ source,target,type: 'ClassBidirectional', data: { sourceMultiplicity,targetMultiplicity } })),
-    }
-    assert.deepEqual(judge(fromVisual(visual), problem), judge(fromPlantUml(answer(problem)), problem))
   })
   test(`${problem.id}: wrong multiplicity and relationship type fail`, () => {
     const model = fromPlantUml(answer(problem))
@@ -43,6 +38,14 @@ for (const p of problems.filter(p => p.lesson)) {
     assert.ok(judge(fromPlantUml(p.lesson.solution), p).every(r => r.passed))
   })
 }
+test('interface exercises distinguish interfaces, classes, attributes and methods', () => {
+  const p = problems.find(p => p.id === 'learn-interface-method')
+  const run = source => judge(fromPlantUml(`@startuml\n${source}\n@enduml`), p)
+  assert.ok(run('interface Payable {\n+ pay(): Boolean\n}').every(r => r.passed))
+  assert.ok(run('class Payable {\n+ pay(): Boolean\n}').some(r => r.id === 'interface-Payable' && !r.passed))
+  assert.ok(run('interface Payable {\npay: Boolean\n}').some(r => r.id === 'method-Payable-pay' && !r.passed))
+  assert.ok(judge(fromPlantUml('@startuml\ninterface Student\n@enduml'), problems.find(p => p.id === 'learn-class')).some(r => !r.passed))
+})
 test('association lesson does not require multiplicity', () => {
   const p = problems.find(p => p.id === 'learn-association')
   assert.ok(judge(fromPlantUml(p.lesson.solution), p).every(r => !r.id.startsWith('mult-')))

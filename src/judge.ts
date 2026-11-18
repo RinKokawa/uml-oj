@@ -1,46 +1,21 @@
-// Import the standalone PEG grammar: the package root also loads Node-only CLI utilities.
-import { parse } from 'plantuml-parser/dist/plantuml.js'
 import type { Problem } from './problems'
+import type { Diagram } from './uml/model'
 
 export type TestResult = { id: string; title: string; passed: boolean; detail: string }
 export type Model = {
-  classes: { name: string; attributes: string[] }[]
+  classes: { name: string; attributes: string[]; methods?: string[]; kind?: 'interface' }[]
   relations: { source: string; target: string; association: boolean; sourceMultiplicity: string; targetMultiplicity: string }[]
 }
 const normalize = (text: string) => text.trim().toLowerCase()
 const attributeName = (value: string) => value.replace(/^\s*[-+#~]\s*/, '').split(':')[0].trim()
+const methodName = (value: string) => value.replace(/^\s*[-+#~]\s*/, '').split('(')[0].trim()
 
-export function fromPlantUml(text: string): Model {
-  if (!text.trim()) throw new Error('请输入 PlantUML 源码。')
-  if (!/^\s*@startuml\b/m.test(text) || !/^\s*@enduml\s*$/m.test(text)) throw new Error('请使用 @startuml 和 @enduml 包围类图。')
-  const syntax = text.replace(/'.*$/gm, '').replace(/"[^"\n]*"/g, '""')
-  if (/^\s*class\s*(?:\{|$)/m.test(syntax) || (syntax.match(/\{/g)?.length ?? 0) !== (syntax.match(/\}/g)?.length ?? 0)) {
-    throw new Error('类声明不完整，请检查类名和花括号是否配对。')
-  }
-  const diagrams = parse(text) as any[]
-  if (diagrams.length !== 1) throw new Error('请提交一个 @startuml / @enduml 类图。')
-  const elements = diagrams[0].elements ?? []
+export function fromDiagram(diagram: Diagram): Model {
   return {
-    classes: elements.filter((e: any) => typeof e.name === 'string' && Array.isArray(e.members) && Object.hasOwn(e, 'isAbstract'))
-      .map((e: any) => ({ name: e.name, attributes: e.members
-        .filter((m: any) => !m.isMethod && !Object.hasOwn(m, '_arguments') && !Object.hasOwn(m, 'returnType') && !String(m.name ?? m.title ?? '').includes('('))
-        .map((m: any) => attributeName(String(m.name ?? m.title ?? ''))) })),
-    relations: elements.filter((e: any) => typeof e.left === 'string' && typeof e.right === 'string')
-      .map((e: any) => ({ source: e.left, target: e.right,
-        association: !/[o*|]/.test(`${e.leftArrowHead}${e.rightArrowHead}`) && `${e.leftArrowBody}${e.rightArrowBody}`.includes('-') && !`${e.leftArrowBody}${e.rightArrowBody}`.includes('.'),
-        sourceMultiplicity: e.leftCardinality ?? '', targetMultiplicity: e.rightCardinality ?? '' })),
-  }
-}
-
-export function fromVisual(model: any): Model {
-  const nodes = (model.nodes ?? []).filter((n: any) => n.type === 'class' && !n.data?.isInterface && !n.data?.isEnum)
-  const names = new Map(nodes.map((n: any) => [n.id, n.data?.name ?? '']))
-  return {
-    classes: nodes.map((n: any) => ({ name: n.data?.name ?? '', attributes: (n.data?.attributes ?? [])
-      .map((a: any) => attributeName(typeof a === 'string' ? a : a.name ?? '')) })),
-    relations: (model.edges ?? []).map((e: any) => ({ source: names.get(e.source) ?? '', target: names.get(e.target) ?? '',
-      association: ['ClassBidirectional', 'ClassUnidirectional'].includes(e.type),
-      sourceMultiplicity: e.data?.sourceMultiplicity ?? '', targetMultiplicity: e.data?.targetMultiplicity ?? '' })),
+    classes: diagram.classes.map(c => ({ name: c.name, attributes: c.attributes.map(attributeName), methods: c.methods.map(methodName), ...(c.kind === 'interface' ? { kind: 'interface' as const } : {}) })),
+    relations: diagram.relations.map(r => ({ source: r.source, target: r.target,
+      association: ['ClassBidirectional', 'ClassUnidirectional'].includes(r.type),
+      sourceMultiplicity: r.sourceMultiplicity, targetMultiplicity: r.targetMultiplicity })),
   }
 }
 
@@ -50,12 +25,21 @@ export function judge(model: Model, problem: Problem): TestResult[] {
     results.push({ id, title, passed, detail: passed ? '满足要求。' : failure })
   }
   for (const required of problem.classes) {
-    const matches = model.classes.filter(c => normalize(c.name) === normalize(required.name))
+    const matches = model.classes.filter(c => c.kind !== 'interface' && normalize(c.name) === normalize(required.name))
     check(`class-${required.name}`, `存在 ${required.name} 类`, matches.length === 1, `需要且只能有一个名为 ${required.name} 的类。`)
     for (const attr of required.attributes) {
       check(`attr-${required.name}-${attr}`, `${required.name} 包含属性 ${attr}`,
         matches.length === 1 && matches[0].attributes.some(a => normalize(a) === normalize(attr)),
         `请在 ${required.name} 类中添加属性 ${attr}（不是方法）。`)
+    }
+  }
+  for (const required of problem.interfaces ?? []) {
+    const matches = model.classes.filter(c => c.kind === 'interface' && normalize(c.name) === normalize(required.name))
+    check(`interface-${required.name}`, `存在 ${required.name} 接口`, matches.length === 1, `需要且只能有一个名为 ${required.name} 的接口；普通类不能代替接口。`)
+    for (const method of required.methods) {
+      check(`method-${required.name}-${method}`, `${required.name} 包含方法 ${method}`,
+        matches.length === 1 && (matches[0].methods ?? []).some(m => normalize(m) === normalize(method)),
+        `请在 ${required.name} 接口中添加方法 ${method}；属性不能代替方法。`)
     }
   }
   const multiplicity = (s: string) => s.replace(/\s/g, '').replace(/^\*$/, '0..*').replace(/^1\.\.1$/, '1')
