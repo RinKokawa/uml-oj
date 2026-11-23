@@ -9,7 +9,7 @@ test('desktop uses a focused workbench with independently scrollable statement a
   await page.getByRole('button', { name: '开始作答：图书借阅系统' }).click()
   const statement = page.locator('.problem-scroll')
   const source = page.getByRole('textbox', { name: 'PlantUML source' })
-  const resultToggle = page.getByRole('button', { name: /评测结果.*尚未提交/ })
+  const resultToggle = page.getByRole('button', { name: /评测结果.*当前答案未评测/ })
   await expect(resultToggle).toHaveAttribute('aria-expanded', 'false')
   expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThanOrEqual(720)
   const before = await source.boundingBox()

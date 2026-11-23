@@ -274,6 +274,7 @@ defineExpose({ hasPending: () => dirty.value, getLayout: () => structuredClone(t
       <button ref="relationButton" :disabled="disabled || diagram.classes.length < 2" :aria-pressed="!!relationPick" @click="toggleRelationPick"><Link2 :size="14" /> {{ relationPick ? '取消连线' : '添加关联' }}</button>
       <span v-if="relationPick" class="connection-hint" role="status">{{ relationPick.source ? `起点：${relationPick.source}。请选择终点（Esc 取消）` : '请选择起点（Esc 取消）' }}</span>
       <span v-else>拖动类或接口调整位置，点击节点或连线编辑</span>
+      <span class="canvas-pan-hint">在画布空白处左右滑动</span>
       <span v-if="relationPick && error" class="inspector-error" role="alert">{{ error }}</span>
     </div>
     <div v-if="!storageOk" class="canvas-storage-warning" role="alert">画布布局无法读取或保存；请下载草稿备份。</div>

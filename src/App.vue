@@ -92,7 +92,7 @@ const accepted = computed(() => !!results.value?.length && passed.value === resu
 const lessonProgress = computed(() => lessons.filter(p => completed.value.has(p.id)).length)
 const notice = ref('源码和本地画布共用同一份答案；画布编辑请先应用更改。')
 const passed = computed(() => results.value?.filter(r => r.passed).length ?? 0)
-type Draft = { source: string; model: Diagram; sourceMode: boolean; syncedKey: string | null; sourceFormat?: SourceFormat; sourceVariants?: Partial<Record<SourceFormat, SourceVariant>> }
+type Draft = { source: string; model: Diagram; sourceMode: boolean; syncedKey: string | null; sourceFormat?: SourceFormat; sourceVariants?: Partial<Record<SourceFormat, SourceVariant>>; evaluated?: boolean }
 const drafts = new Map<string, Draft>()
 const storageAvailable = ref(true)
 const storageKey = 'uml-oj-native-drafts-v1'
@@ -105,7 +105,7 @@ function saveDrafts() {
   if (restoring || saveBlocked) return
   try {
     const data = Object.fromEntries(drafts)
-    data[selectedId.value] = { source: source.value, model: answer.value, sourceMode: sourceMode.value, syncedKey, sourceFormat: sourceFormat.value, sourceVariants }
+    data[selectedId.value] = { source: source.value, model: answer.value, sourceMode: sourceMode.value, syncedKey, sourceFormat: sourceFormat.value, sourceVariants, evaluated: results.value !== null }
     localStorage.setItem(storageKey, JSON.stringify({ version: 1, drafts: data, completed: [...completed.value], selectedId: selectedId.value, view: view.value, lastSelected }))
     storageAvailable.value = true
   } catch {
@@ -170,6 +170,11 @@ function restoreDrafts() {
 }
 
 function clearReport() { results.value = null; error.value = '' }
+function restoreReport(draft: Draft | undefined) {
+  if (draft?.evaluated === true && syncState.value === 'synced' && syncedKey === draft.syncedKey) {
+    results.value = judge(fromDiagram(answer.value), problem.value)
+  }
+}
 function setProblemWidth(clientX: number) {
   if (!layout.value) return
   const rect = layout.value.getBoundingClientRect()
@@ -326,8 +331,8 @@ async function changeSourceFormat(event: Event) {
   } finally { transitioning.value = false }
 }
 watch(source, () => {
-  clearReport(); scheduleSave()
-  if (!restoring && !updatingSource) { sourceMode.value = true; scheduleSourceSync() }
+  if (!restoring && !updatingSource) { clearReport(); sourceMode.value = true; scheduleSourceSync() }
+  scheduleSave()
 }, { flush: 'sync' })
 watch([sourceMode, sourceFormat, completed, view], scheduleSave, { flush: 'sync' })
 async function selectProblem(event: Event) {
@@ -371,7 +376,7 @@ function openProblem(id: string) {
   clearTimeout(syncTimer)
   canvasDirty.value = false
   drafts.set(selectedId.value, {
-    source: source.value, model: structuredClone(toRaw(answer.value)), sourceMode: sourceMode.value, syncedKey, sourceFormat: sourceFormat.value, sourceVariants: structuredClone(sourceVariants),
+    source: source.value, model: structuredClone(toRaw(answer.value)), sourceMode: sourceMode.value, syncedKey, sourceFormat: sourceFormat.value, sourceVariants: structuredClone(sourceVariants), evaluated: results.value !== null,
   })
   selectedId.value = id
   lastSelected[section.value] = id
@@ -386,6 +391,7 @@ function openProblem(id: string) {
   updatingSource = false
   reconcileAfterRestore()
   clearReport()
+  restoreReport(draft)
   notice.value = `正在练习：${problem.value.title}。切换题目会保留草稿。`
   scheduleSave()
 }
@@ -427,6 +433,7 @@ async function runTests() {
     const model = fromDiagram(verifySynchronized())
     results.value = judge(model, problem.value)
     if (results.value.every(r => r.passed)) completed.value = new Set([...completed.value, selectedId.value])
+    saveDrafts()
     notice.value = problem.value.lesson ? '只检查本关目标。没通过也没关系，可以展开提示或参考答案，修改后再试。' : '评测完成。检查类、属性、普通关联及两端多重性；不检查属性类型、可见性或布局。'
   } catch (e) {
     error.value = `无法解析模型：${e instanceof Error ? e.message : String(e)}`
@@ -476,6 +483,7 @@ onMounted(() => {
     restoreDrafts()
     restoring = false
     reconcileAfterRestore()
+    restoreReport(drafts.get(selectedId.value))
   } catch (e) {
     restoring = false
     error.value = `画布初始化失败，可以使用 PlantUML 模式。${e instanceof Error ? e.message : ''}`
@@ -615,7 +623,7 @@ Example "1" -- "0..*" OtherExample</pre>
         <div v-if="syncState === 'conflict'" class="sync-conflict" role="alert"><span>源码与画布不一致，提交已暂停。请选择要继续使用的内容；另一侧将先备份到本机。</span><button class="secondary" @click="resolveSyncConflict('source')">使用源码</button><button class="secondary" @click="resolveSyncConflict('canvas')">使用画布</button></div>
         <div v-if="!storageAvailable" class="storage-warning workspace-warning" role="alert">浏览器存储不可用或草稿无法恢复，请导出答案；刷新可能丢失修改。</div>
         <div ref="feedback" class="feedback-anchor" :class="{ expanded: feedbackOpen }">
-        <button class="feedback-toggle" :aria-expanded="feedbackOpen" aria-controls="feedback-content" @click="feedbackOpen = !feedbackOpen"><span class="icon-label"><ClipboardCheck class="panel-icon" />评测结果 <span v-if="results" class="feedback-summary" :class="accepted ? 'ok' : 'fail'">{{ accepted ? '通过' : '未通过' }} · {{ passed }}/{{ results.length }}</span><span v-else-if="error" class="feedback-summary fail">输入错误</span><span v-else class="feedback-empty">尚未提交</span></span><ChevronDown v-if="feedbackOpen" /><ChevronUp v-else /></button>
+        <button class="feedback-toggle" :aria-expanded="feedbackOpen" aria-controls="feedback-content" @click="feedbackOpen = !feedbackOpen"><span class="icon-label"><ClipboardCheck class="panel-icon" />评测结果 <span v-if="results" class="feedback-summary" :class="accepted ? 'ok' : 'fail'">{{ accepted ? '通过' : '未通过' }} · {{ passed }}/{{ results.length }}</span><span v-else-if="error" class="feedback-summary fail">输入错误</span><span v-else class="feedback-empty">当前答案未评测</span></span><ChevronDown v-if="feedbackOpen" /><ChevronUp v-else /></button>
         <div v-show="feedbackOpen" id="feedback-content" class="feedback-content">
         <p v-if="!error && !results" class="feedback-placeholder">提交后在这里查看逐项评测结果。</p>
         <section v-if="error" class="results error-report" role="alert"><h2>暂时无法完成操作</h2><pre>{{ error }}</pre></section>
