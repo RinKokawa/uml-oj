@@ -6,7 +6,11 @@ html[data-theme="dark"] .native-canvas { background:#1d2025; }
 .canvas-toolbar button:not(:disabled):hover, .canvas-inspector button:not(:disabled):hover { border-color:#3498db; color:#3498db; }
 .canvas-workspace { position:relative; display:flex; flex:1 1 0; min-width:0; min-height:0; overflow:hidden; }
 .canvas-scroll { flex:1 1 0; min-width:0; min-height:160px; overflow:auto; background-color:#f6f8fb; background-image:radial-gradient(#cad4df 1px,transparent 1px); background-size:16px 16px; }
-.diagram-svg { display:block; width:100%; min-width:720px; height:auto; min-height:100%; color:#506275; touch-action:none; user-select:none; -webkit-user-select:none; }
+.diagram-svg { display:block; width:100%; min-width:720px; height:auto; min-height:100%; color:#506275; user-select:none; -webkit-user-select:none; }
+.canvas-node, .canvas-node .node-body, .canvas-node line { touch-action:none; }
+.connecting .canvas-node, .connecting .canvas-node .node-body, .connecting .canvas-node line { touch-action:auto; }
+.canvas-pan-hint { display:none; }
+@media (max-width:760px) { .canvas-pan-hint { display:inline; } }
 .canvas-node { cursor:grab; outline:none; } .canvas-node:active { cursor:grabbing; } .canvas-node.disabled { cursor:not-allowed; }
 .canvas-node .node-body { fill:#fff; stroke:#6c8194; stroke-width:1.5; } .canvas-node line { stroke:#9babb9; } .canvas-node text { font-size:15px; fill:#233241; pointer-events:none; } .canvas-node .node-title { font-size:16px; font-weight:700; } .canvas-node .node-stereotype { font-size:12px; }
 .canvas-node .node-outline { fill:none; stroke:#3498db; stroke-width:2; stroke-dasharray:5 4; opacity:0; pointer-events:none; }
