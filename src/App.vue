@@ -540,12 +540,8 @@ onBeforeUnmount(() => {
     </header>
     <main v-if="view === 'catalog'" class="catalog">
       <div class="catalog-heading">
-        <div class="catalog-intro"><div class="eyebrow"><span aria-hidden="true">{{ section === 'tutorial' ? '01' : '02' }}</span>{{ section === 'tutorial' ? 'UML 入门' : '独立练习' }}</div><h1>{{ section === 'tutorial' ? '教学关卡' : '正式题库' }}</h1><p>{{ section === 'tutorial' ? '从认识类到理解多重性，一关一个知识点。' : '读业务需求、画类图、交给测试用例检验。' }}</p></div>
-        <div class="catalog-progress">
-          <span class="catalog-progress-label">完成进度</span>
-          <strong>{{ section === 'tutorial' ? lessonProgress : challengeProgress }}<span> / {{ sectionProblems.length }}</span></strong>
-          <div class="catalog-meter" aria-hidden="true"><span v-for="n in sectionProblems.length" :key="n" :class="{ filled: n <= (section === 'tutorial' ? lessonProgress : challengeProgress) }"></span></div>
-        </div>
+        <div><h1>{{ section === 'tutorial' ? '教学关卡' : '正式题库' }}</h1><p>{{ section === 'tutorial' ? '从认识类到多重性，一关一个知识点。' : '按题目要求建模，再提交评测。' }}</p></div>
+        <div class="catalog-progress"><span>已完成</span><strong>{{ section === 'tutorial' ? lessonProgress : challengeProgress }}<span> / {{ sectionProblems.length }}</span></strong></div>
       </div>
       <div v-if="!storageAvailable" class="storage-warning" role="alert">浏览器存储不可用或草稿无法恢复。请导出答案；关闭或刷新页面可能丢失修改。</div>
       <section class="catalog-list" :aria-label="section === 'tutorial' ? '教学关卡列表' : '正式题目列表'">
@@ -558,7 +554,7 @@ onBeforeUnmount(() => {
         <div class="catalog-list-head"><span>{{ section === 'tutorial' ? '学习路径' : '挑战列表' }}</span><span role="status">{{ catalogEntries.length }} 道题</span></div>
         <article v-for="{ item: p, index } in catalogEntries" :key="p.id" class="catalog-row">
           <div class="catalog-number">{{ String(index + 1).padStart(2, '0') }}</div>
-          <div class="catalog-copy"><span class="catalog-level">{{ p.level }}</span><h2><button class="catalog-title" @click="enterProblem(p.id)">{{ p.title }}</button></h2><p>{{ p.description }}</p></div>
+          <div class="catalog-copy"><h2><button class="catalog-title" @click="enterProblem(p.id)">{{ p.title }}</button></h2><p>{{ p.description }}</p><span class="catalog-level">{{ p.level }}</span></div>
           <div class="catalog-status" :class="{ done: completed.has(p.id) }"><Check v-if="completed.has(p.id)" :size="14" />{{ completed.has(p.id) ? '已完成' : '未完成' }}</div>
           <button class="catalog-enter" :aria-label="`${section === 'tutorial' ? '开始学习' : '开始作答'}：${p.title}`" @click="enterProblem(p.id)">{{ section === 'tutorial' ? '开始学习' : '开始作答' }} <ArrowRight :size="14" /></button>
         </article>
