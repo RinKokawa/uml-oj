@@ -30,10 +30,20 @@ async function toggleTheme() {
 const problemPanel = ref<HTMLElement | null>(null)
 const feedback = ref<HTMLElement | null>(null)
 const layout = ref<HTMLElement | null>(null)
+const editorPanes = ref<HTMLElement | null>(null)
+const workspace = ref<HTMLElement | null>(null)
 const isNarrow = ref(typeof window !== 'undefined' && window.innerWidth <= 760)
-function updateViewport() { isNarrow.value = window.innerWidth <= 760 }
+const isWide = ref(window.innerWidth >= 1100)
+function updateViewport() {
+  isNarrow.value = window.innerWidth <= 760
+  isWide.value = window.innerWidth >= 1100
+}
 const problemWidth = ref(32)
 const feedbackOpen = ref(false)
+const canvasWidth = ref<number | null>(null)
+const feedbackHeight = ref<number | null>(null)
+const canvasPercent = computed(() => canvasWidth.value ?? (isWide.value ? 62.5 : 50))
+const reportPercent = computed(() => feedbackHeight.value ?? 32)
 const guideOpen = ref(true)
 const problemVisible = ref(true)
 const emptyDiagram = (): Diagram => ({ classes: [], relations: [] })
@@ -227,6 +237,42 @@ function resizeWithKeyboard(event: KeyboardEvent) {
   if (!layout.value) return
   const rect = layout.value.getBoundingClientRect()
   setProblemWidth(rect.left + rect.width * (problemWidth.value + (event.key === 'ArrowLeft' ? -2 : 2)) / 100)
+}
+type WorkbenchSplit = 'canvas' | 'report'
+const liveSplits = new Map<WorkbenchSplit, number>()
+function setWorkbenchSplit(split: WorkbenchSplit, value: number) {
+  const [min, max] = split === 'canvas' ? [34, 72] : [24, 55]
+  const size = Math.round(Math.max(min, Math.min(max, value)))
+  if (split === 'canvas') canvasWidth.value = size
+  else feedbackHeight.value = size
+}
+function startWorkbenchSplit(event: PointerEvent, split: WorkbenchSplit) {
+  if (event.button !== 0 || !event.isPrimary) return
+  const handle = event.currentTarget as HTMLElement
+  liveSplits.set(split, event.pointerId)
+  handle.setPointerCapture(event.pointerId)
+}
+function moveWorkbenchSplit(event: PointerEvent, split: WorkbenchSplit) {
+  if (liveSplits.get(split) !== event.pointerId) return
+  const rect = (split === 'canvas' ? editorPanes : workspace).value?.getBoundingClientRect()
+  if (!rect) return
+  if (split === 'canvas') setWorkbenchSplit(split, (event.clientX - rect.left - 4) / (rect.width - 8) * 100)
+  else setWorkbenchSplit(split, (rect.bottom - event.clientY - 4) / rect.height * 100)
+}
+function stopWorkbenchSplit(event: PointerEvent, split: WorkbenchSplit) {
+  if (liveSplits.get(split) === event.pointerId) liveSplits.delete(split)
+}
+function keyboardWorkbenchSplit(event: KeyboardEvent, split: WorkbenchSplit) {
+  const [increase, decrease, current] = split === 'canvas'
+    ? ['ArrowRight', 'ArrowLeft', canvasPercent.value] as const
+    : ['ArrowUp', 'ArrowDown', reportPercent.value] as const
+  if (event.key === 'Home' || event.key === 'End') {
+    event.preventDefault()
+    setWorkbenchSplit(split, event.key === 'Home' ? 0 : 100)
+  } else if (event.key === increase || event.key === decrease) {
+    event.preventDefault()
+    setWorkbenchSplit(split, current + (event.key === increase ? 4 : -4))
+  }
 }
 function toggleProblemPanel() {
   problemVisible.value = !problemVisible.value
@@ -609,7 +655,7 @@ onBeforeUnmount(() => {
         </div>
       </aside>
       <div v-show="problemVisible" class="panel-resizer" role="separator" tabindex="0" aria-label="调整题面宽度" aria-orientation="vertical" :aria-valuenow="problemWidth" aria-valuemin="25" aria-valuemax="65" @pointerdown="startResize" @keydown="resizeWithKeyboard"><span></span></div>
-      <section id="workspace" class="workspace" aria-label="建模工作区">
+      <section id="workspace" ref="workspace" class="workspace" aria-label="建模工作区">
         <a v-show="problemVisible" class="mobile-back" href="#problem-panel"><ArrowUp /> 返回题目和提示</a>
         <div class="workspace-head">
           <div class="workspace-title"><h2>开始建模</h2></div>
@@ -628,11 +674,15 @@ onBeforeUnmount(() => {
           </div>
           <span class="sync-indicator"><ArrowLeftRight /> 自动同步</span>
         </div>
-        <div class="editor-panes" :class="{ 'canvas-focus': canvasFocus && !isNarrow }">
-          <div v-show="!isNarrow || !sourceMode" class="visual-pane">
+        <div ref="editorPanes" class="editor-panes" :class="{ 'canvas-focus': canvasFocus && !isNarrow }" :style="{ '--canvas-share': `${canvasPercent}%` }">
+          <div id="canvas-pane" v-show="!isNarrow || !sourceMode" class="visual-pane">
             <div class="pane-heading">可视化画布 <span v-if="syncState !== 'synced'" class="stale-label">{{ syncState === 'canvas-error' ? '请修正画布' : '画布未同步' }}</span></div>
             <NativeCanvas ref="canvas" :diagram="answer" :problem-id="selectedId" :disabled="syncState !== 'synced' || transitioning" :on-apply="applyCanvasChange" @dirty="onCanvasDirty" />
           </div>
+          <div v-if="!isNarrow && !canvasFocus" class="workbench-splitter" role="separator" tabindex="0"
+            aria-label="调整画布和源码宽度" aria-controls="canvas-pane" aria-orientation="vertical" aria-valuemin="34" aria-valuemax="72" :aria-valuenow="canvasPercent"
+            @pointerdown="startWorkbenchSplit($event, 'canvas')" @pointermove="moveWorkbenchSplit($event, 'canvas')"
+            @lostpointercapture="stopWorkbenchSplit($event, 'canvas')" @keydown="keyboardWorkbenchSplit($event, 'canvas')"><span></span></div>
           <div id="source-pane" v-show="sourceVisible" class="source-wrap">
             <div class="source-label"><span class="icon-label"><FileCode2 class="file-icon" :size="14" />{{ sourceFormat === 'plantuml' ? 'solution.puml' : 'solution.mmd' }}</span><label>源码格式 <select :value="sourceFormat" aria-label="源码格式" :disabled="transitioning" @change="changeSourceFormat"><option value="plantuml">PlantUML</option><option value="mermaid">Mermaid</option></select></label></div>
             <textarea ref="sourceElement" v-model="source" spellcheck="false" :readonly="syncState === 'canvas-error' || syncState === 'conflict' || canvasDirty" :aria-label="sourceFormat === 'plantuml' ? 'PlantUML source' : 'Mermaid source'"></textarea>
@@ -655,7 +705,11 @@ Example "1" -- "0..*" OtherExample</pre>
         <div v-if="canvasDirty" class="sync-warning" role="status">画布编辑面板有未应用的内容，请先应用或撤销，再编辑源码或提交。</div>
         <div v-if="syncState === 'conflict'" class="sync-conflict" role="alert"><span>源码与画布不一致，提交已暂停。请选择要继续使用的内容；另一侧将先备份到本机。</span><button class="secondary" @click="resolveSyncConflict('source')">使用源码</button><button class="secondary" @click="resolveSyncConflict('canvas')">使用画布</button></div>
         <div v-if="!storageAvailable" class="storage-warning workspace-warning" role="alert">浏览器存储不可用或草稿无法恢复，请导出答案；刷新可能丢失修改。</div>
-        <div ref="feedback" class="feedback-anchor" :class="{ expanded: feedbackOpen }">
+        <div ref="feedback" class="feedback-anchor" :class="{ expanded: feedbackOpen }" :style="{ '--report-share': feedbackHeight === null ? undefined : `${feedbackHeight}%` }">
+        <div v-if="feedbackOpen && !isNarrow" class="workbench-splitter split-horizontal" role="separator" tabindex="0"
+          aria-label="调整评测报告高度" aria-controls="feedback-content" aria-orientation="horizontal" aria-valuemin="24" aria-valuemax="55" :aria-valuenow="reportPercent"
+          @pointerdown="startWorkbenchSplit($event, 'report')" @pointermove="moveWorkbenchSplit($event, 'report')"
+          @lostpointercapture="stopWorkbenchSplit($event, 'report')" @keydown="keyboardWorkbenchSplit($event, 'report')"><span></span></div>
         <button class="feedback-toggle" :aria-expanded="feedbackOpen" aria-controls="feedback-content" @click="feedbackOpen = !feedbackOpen"><span class="icon-label"><ClipboardCheck class="panel-icon" />评测结果 <span v-if="results" class="feedback-summary" :class="accepted ? 'ok' : 'fail'">{{ accepted ? '通过' : '未通过' }} · {{ passed }}/{{ results.length }}</span><span v-else-if="error" class="feedback-summary fail">输入错误</span><span v-else class="feedback-empty">当前答案未评测</span></span><ChevronDown v-if="feedbackOpen" /><ChevronUp v-else /></button>
         <div v-show="feedbackOpen" id="feedback-content" class="feedback-content">
         <p v-if="!error && !results" class="feedback-placeholder">提交后在这里查看逐项评测结果。</p>
