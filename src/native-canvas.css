@@ -42,3 +42,8 @@ html[data-theme="dark"] .native-canvas { background:#1d2025; }
 html[data-theme="dark"] .canvas-inspector { background:#1d2025; } html[data-theme="dark"] .canvas-inspector input, html[data-theme="dark"] .canvas-inspector textarea { background:#24272c; } html[data-theme="dark"] .edge-handle { fill:#191c21; }
 html[data-theme="dark"] .canvas-scroll { background-color:#191c21; background-image:radial-gradient(#36404a 1px,transparent 1px); } html[data-theme="dark"] .canvas-node .node-body { fill:#252b32; stroke:#738496; } html[data-theme="dark"] .canvas-node.selected .node-body, html[data-theme="dark"] .canvas-node:focus-visible .node-body { fill:#213648; stroke:#56b3ef; } html[data-theme="dark"] .canvas-node text { fill:#e7edf3; } html[data-theme="dark"] .canvas-edge text { fill:#e7edf3; stroke:#191c21; } html[data-theme="dark"] .canvas-inspector select { background:#24272c; }
 @media(max-width:760px) { .native-canvas { height:70vh; min-height:480px; } .canvas-inspector { width:min(290px, 88%); } }
+
+.canvas-workspace.connecting .canvas-node:not(.disabled) { cursor: crosshair; }
+.canvas-workspace.connecting .canvas-edge { pointer-events: none; }
+.canvas-node.connection-source .node-outline { opacity: 1; stroke-width: 3; }
+.canvas-toolbar .connection-hint { color: var(--ink); font-weight: 600; }
