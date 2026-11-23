@@ -15,7 +15,7 @@ test('catalogs and workspaces are separate, and drafts and progress survive relo
   await page.getByRole('button', { name: '返回教学关卡' }).click()
   await expect(page.getByRole('region', { name: '教学关卡列表' }).locator('article').first()).toContainText('已完成')
   await page.getByRole('button', { name: '正式挑战', exact: true }).click()
-  await expect(page.getByRole('region', { name: '正式题目列表' }).locator('article')).toHaveCount(2)
+  await expect(page.getByRole('region', { name: '正式题目列表' }).locator('article')).toHaveCount(5)
   await page.getByRole('button', { name: '开始作答：项目管理系统' }).click()
   await source.click(); await expect(source).toBeEditable(); await source.fill('@startuml\nclass Developer {\n - name: String\n}\n@enduml')
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('uml-oj-native-drafts-v1') || '{}')?.drafts?.['project-management']?.source)).toContain('Developer')
