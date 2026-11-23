@@ -157,8 +157,8 @@ test('draw.io source updates retain positions, styles, IDs, routing and page met
 })
 
 test('unsupported content is rejected rather than silently discarded', () => {
-  for (const text of ['classDiagram\nclass A\nA <|-- B', 'classDiagram\nnamespace N {\nclass A\n}', 'classDiagram\nclass A {\n<<service>>\n}', 'classDiagram\nnote "hello"', 'classDiagram\nclass A {\n+static()$\n}']) assert.throws(() => parseMermaid(text), /保留/)
-  for (const text of ['@startuml\nabstract class A\n@enduml', '@startuml\nclass A\nclass B\nA --|> B\n@enduml']) assert.throws(() => parsePlantUml(text), /保留/)
+  for (const text of ['classDiagram\nclass A\nA *-- B', 'classDiagram\nnamespace N {\nclass A\n}', 'classDiagram\nclass A {\n<<service>>\n}', 'classDiagram\nnote "hello"', 'classDiagram\nclass A {\n+static()$\n}']) assert.throws(() => parseMermaid(text), /保留/)
+  for (const text of ['@startuml\nabstract class A\n@enduml', '@startuml\nclass A\nclass B\nA *-- B\n@enduml']) assert.throws(() => parsePlantUml(text), /保留/)
   const xml = toDrawio(model())
   assert.throws(() => parseDrawio(xml.replace('</root>', '<mxCell id="note" value="hello" vertex="1" parent="1" style="shape=note;"/></root>')), /保留/)
   assert.throws(() => parseDrawio('<mxfile><diagram>compressed</diagram></mxfile>'), /压缩/)
@@ -180,7 +180,7 @@ test('unsupported content is rejected rather than silently discarded', () => {
 })
 
 test('round-tripped UML model preserves the existing judge results', () => {
-  for (const problem of problems) {
+  for (const problem of problems.filter(p => !p.referenceOnly)) {
     const source = problem.lesson?.solution ?? ['@startuml', ...problem.classes.map(c => `class ${c.name} {\n${c.attributes.map(a => `- ${a}: String`).join('\n')}\n}`), ...problem.relations.map(([a,b,ma,mb]) => `${a}${ma === null ? '' : ` "${ma}"`} -- ${mb === null ? '' : `"${mb}" `}${b}`), '@enduml'].join('\n')
     const model = parsePlantUml(source)
     const expected = judge(fromDiagram(model), problem)

@@ -164,6 +164,7 @@ export function proposeClassTitleRepair(xml: string): { xml: string; original: s
 export function toDrawio(diagram: Diagram): string {
   assertOjDiagram(diagram)
   if (diagram.classes.some(c => c.kind === 'interface')) fail('旧 draw.io 适配器尚不支持接口，无法无损转换。')
+  if (diagram.relations.some(r => !['ClassBidirectional', 'ClassUnidirectional'].includes(r.type))) fail('旧 draw.io 适配器尚不支持继承或实现关系，无法无损转换。')
   const cells: string[] = ['<mxCell id="0"/>', '<mxCell id="1" parent="0"/>']
   const ids = new Map<string, string>()
   diagram.classes.forEach((c, i) => {

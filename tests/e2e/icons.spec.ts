@@ -44,7 +44,7 @@ test('UI uses decorative Lucide SVGs while controls keep their accessible names'
     expect(icon.hidden).toBe('true')
     expect(icon.stroke).toBe('currentColor')
     expect(icon.strokeWidth).toBe('2')
-    expect(['7', '12', '14', '16']).toContain(icon.size)
+    expect(['7', '12', '14', '16', '20']).toContain(icon.size)
     expect(icon.tabIndex).toBeNull()
   }
   await page.getByRole('button', { name: '返回教学关卡', exact: true }).click()

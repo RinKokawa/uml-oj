@@ -1,0 +1,93 @@
+import { expect, test, type Locator, type Page } from '@playwright/test'
+
+const port = (page: Page, name: string, side: '左' | '右') => page.getByRole('button', { name: `${name} 的${side}连接点`, exact: true })
+async function center(locator: Locator) {
+  const box = (await locator.boundingBox())!
+  return { x: box.x + box.width / 2, y: box.y + box.height / 2 }
+}
+async function drag(page: Page, from: Locator, to: Locator) {
+  const a = await center(from), b = await center(to)
+  await page.mouse.move(a.x, a.y); await page.mouse.down()
+  await page.mouse.move(b.x, b.y, { steps: 8 }); await page.mouse.up()
+}
+
+test('drag a connector to the class body to solve the association lesson', async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 900 })
+  await page.goto('/')
+  await page.getByRole('button', { name: '开始学习：第 3 关：连接两个类' }).click()
+  await page.getByRole('button', { name: '适应内容' }).click()
+  const source = page.getByRole('textbox', { name: 'PlantUML source' })
+  const before = await source.inputValue()
+  const from = port(page, 'Student', '右')
+  const to = page.getByRole('button', { name: '编辑类 Course' }).locator('.node-body')
+  const a = await center(from), b = await center(to)
+  await page.mouse.move(a.x, a.y); await page.mouse.down()
+  await page.mouse.move(b.x, b.y, { steps: 8 })
+  await expect(page.locator('.connection-preview.valid')).toHaveCount(1)
+  await expect(source).toHaveValue(before)
+  await page.mouse.up()
+  await expect(source).toHaveValue(/Student -- Course/)
+  await expect(page.getByLabel('起点类')).toHaveValue('Student')
+  await expect(page.getByLabel('终点类')).toHaveValue('Course')
+  await page.getByRole('button', { name: '提交评测' }).click()
+  await expect(page.getByText('本关通过！')).toBeVisible()
+  await page.getByLabel('源码格式').selectOption('mermaid')
+  await expect(page.getByRole('textbox', { name: 'Mermaid source' })).toHaveValue(/Student -- Course/)
+})
+
+test('unfinished inspector edits survive rejected and cancelled drags', async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 900 })
+  await page.goto('/')
+  await page.getByRole('button', { name: '开始学习：第 3 关：连接两个类' }).click()
+  await page.getByRole('button', { name: '适应内容' }).click()
+  const source = page.getByRole('textbox', { name: 'PlantUML source' })
+  const before = await source.inputValue()
+  await page.getByRole('button', { name: '编辑类 Student' }).click()
+  await page.getByLabel('类名', { exact: true }).fill('PendingStudent')
+  await expect(page.locator('.canvas-inspector')).toHaveCSS('transform', 'none')
+  let dialogs = 0
+  page.on('dialog', dialog => { dialogs++; void dialog.dismiss() })
+  const from = port(page, 'Student', '左'), to = port(page, 'Course', '左')
+  const a = await center(from)
+  await page.mouse.move(a.x, a.y); await page.mouse.down()
+  await page.mouse.move(a.x, a.y + 80, { steps: 5 }); await page.mouse.up()
+  expect(dialogs).toBe(0)
+  await drag(page, from, to)
+  await expect.poll(() => dialogs).toBe(1)
+  await expect(source).toHaveValue(before)
+  await expect(page.getByLabel('类名', { exact: true })).toHaveValue('PendingStudent')
+  await expect(page.getByRole('button', { name: '编辑关联 Student 到 Course' })).toHaveCount(0)
+  await expect(source).toHaveAttribute('readonly', '')
+})
+
+test('confirming discards only the staged edit before creating the connection', async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 900 })
+  await page.goto('/')
+  await page.getByRole('button', { name: '开始学习：第 3 关：连接两个类' }).click()
+  await page.getByRole('button', { name: '适应内容' }).click()
+  await page.getByRole('button', { name: '编辑类 Student' }).click()
+  await page.getByLabel('类名', { exact: true }).fill('PendingStudent')
+  await expect(page.locator('.canvas-inspector')).toHaveCSS('transform', 'none')
+  page.once('dialog', dialog => void dialog.accept())
+  await drag(page, port(page, 'Student', '左'), port(page, 'Course', '左'))
+  const source = page.getByRole('textbox', { name: 'PlantUML source' })
+  await expect(source).toHaveValue(/Student -- Course/)
+  await expect(source).not.toHaveValue(/PendingStudent/)
+  await expect(source).not.toHaveAttribute('readonly', '')
+  await expect(page.getByLabel('起点类')).toHaveValue('Student')
+})
+
+test('keyboard connectors and repeated pairs are available in the OJ', async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 900 })
+  await page.goto('/')
+  await page.getByRole('button', { name: '开始学习：第 3 关：连接两个类' }).click()
+  await page.getByRole('button', { name: '适应内容' }).click()
+  const from = port(page, 'Student', '右'), to = port(page, 'Course', '左')
+  await from.focus(); await page.keyboard.press('Enter')
+  await expect(page.getByRole('status').filter({ hasText: '已选择 Student' })).toBeVisible()
+  await page.keyboard.press('Tab'); await expect(to).toBeFocused(); await page.keyboard.press('Enter')
+  await expect(page.getByRole('button', { name: '编辑关联 Student 到 Course', exact: true })).toHaveCount(1)
+  await page.getByRole('button', { name: '关闭编辑面板' }).click()
+  await drag(page, from, to)
+  await expect(page.getByRole('button', { name: '编辑关联 Student 到 Course', exact: true })).toHaveCount(2)
+})

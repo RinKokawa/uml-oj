@@ -47,7 +47,7 @@ test('unfinished source is not judged or allowed to overwrite the canvas', async
   await source.fill('@startuml\nenum Student\n@enduml')
   await expect(page.locator('.statusbar')).toContainText('未同步')
   await expect(page.getByRole('button', { name: '编辑类 Student' })).toBeVisible()
-  await expect(page.getByRole('button', { name: '添加类' })).toBeDisabled()
+  await expect(page.getByRole('button', { name: '添加元素' })).toBeDisabled()
   await page.getByRole('button', { name: '提交评测' }).click()
   await expect(page.locator('.error-report')).toBeVisible()
   await page.reload()
@@ -60,6 +60,7 @@ test('unfinished source is not judged or allowed to overwrite the canvas', async
 test('add classes and associations and prevent navigation with pending edits', async ({ page }) => {
   await page.goto('/')
   await page.getByRole('button', { name: '开始学习：第 1 关：认识类' }).click()
+  await page.getByRole('button', { name: '添加元素' }).click()
   await page.getByRole('button', { name: '添加类' }).click()
   await expect(page.getByRole('button', { name: '编辑类 Class1' })).toBeVisible()
   const source = page.getByRole('textbox', { name: 'PlantUML source' })

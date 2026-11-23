@@ -41,7 +41,7 @@ test('desktop shows source and canvas together and keyboard submit reveals feedb
   await expect(textarea).toHaveValue('@startuml\nclass Student\n@enduml')
   await textarea.click(); await expect(textarea).toBeEditable(); await textarea.fill('@startuml\nenum Student\n@enduml')
   await expect(page.locator('.statusbar')).toContainText('未同步')
-  await expect(page.getByRole('button', { name: '添加类' })).toBeDisabled()
+  await expect(page.getByRole('button', { name: '添加元素' })).toBeDisabled()
   await expect(page.getByRole('button', { name: '编辑类 Student' })).toBeVisible()
   await expect(textarea).toHaveValue('@startuml\nenum Student\n@enduml')
 })

@@ -33,7 +33,7 @@ test('tutorials teach one step at a time and advance without losing drafts', asy
   await page.getByRole('button', { name: /正式挑战/ }).click()
   await expect(page.getByRole('heading', { name: '正式题库', exact: true })).toBeVisible()
   await page.getByRole('button', { name: '开始作答：项目管理系统' }).click()
-  await expect(page.getByLabel('选择正式关卡').locator('option')).toHaveCount(5)
+  await expect(page.getByLabel('选择正式关卡').locator('option')).toHaveCount(11)
   await expect(page.locator('.lesson-card')).toHaveCount(0)
   await expect(page.getByRole('progressbar', { name: '教学进度' })).toHaveCount(0)
   await source.click(); await expect(source).toBeEditable(); await source.fill('@startuml\nclass Draft\n@enduml')

@@ -8,9 +8,11 @@
 .panel-resizer { display: grid; place-items: center; cursor: col-resize; touch-action: none; }
 .panel-resizer span { width: 3px; height: 36px; border-radius: 3px; background: #aebcb1; opacity: .55; }
 .panel-resizer:hover span, .panel-resizer:focus-visible span { background: #217dbb; opacity: 1; }
+.panel-resizer:focus-visible { outline: 2px solid #217dbb; outline-offset: -2px; }
+.editor-resizer { background: var(--surface); border-right: 1px solid var(--line); }
 .workspace-head { flex: none; }
 .editor-toolbar { flex: none; }
-.editor-panes { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); flex: 1 1 0; min-height: 0; }
+.editor-panes { display: grid; grid-template-columns: minmax(0, 1fr) 8px minmax(0, 1fr); flex: 1 1 0; min-width: 0; min-height: 0; }
 .visual-pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; border-right: 1px solid var(--line); }
 .formal-placeholder { display: grid; flex: 1; min-height: 200px; place-items: center; padding: 24px; color: var(--muted); text-align: center; font-size: 13px; }
 .pane-heading { display: flex; align-items: center; justify-content: space-between; min-height: 32px; padding: 7px 12px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 11px; font-weight: 700; }
@@ -18,6 +20,7 @@
 .sync-warning { flex: none; padding: 8px 14px; border-top: 1px solid var(--line); color: var(--bad); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
 .sync-conflict { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 10px 14px; border-top: 1px solid var(--line); color: var(--ink); font-size: 12px; }
 .sync-conflict span { flex: 1 1 240px; }
+.source-label { flex-wrap: wrap; align-items: center; }
 .source-label select { max-width: 100px; border: 1px solid var(--line); border-radius: 4px; background: transparent; color: var(--ink); font: inherit; }
 .editor-panes .drawio-trial { min-height: 0; }
 .editor-panes .source-wrap { min-height: 0; height: 100%; }

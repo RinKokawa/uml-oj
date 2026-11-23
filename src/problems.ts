@@ -1,3 +1,5 @@
+import { turinAssessments } from './turin-assessments.ts'
+
 type Relation = [string, string, string | null, string | null]
 type RelationAlternative = {
   relations: [string, string, string, string][]
@@ -19,7 +21,12 @@ export type Problem = {
     failure: string
     options: RelationAlternative[]
   }
+  typedRelations?: { source: string; target: string; type: 'ClassInheritance' | 'ClassRealization' }[]
+  namedRelations?: { source: string; target: string; label: string; sourceMultiplicity?: string; targetMultiplicity?: string }[]
+  assessmentNote?: string
   hint: string
+  source?: { title: string; url: string; page: number; note: string }
+  referenceOnly?: { missing: string[] }
   lesson?: {
     concept: string
     steps: string[]
@@ -30,7 +37,14 @@ export type Problem = {
   }
 }
 
-export const problems: Problem[] = [
+const turinSource = (page: number) => ({
+  title: 'Politecnico di Torino · Class Diagram Exercises',
+  url: 'https://softeng.polito.it/tongji/SE/ex/class-diag-ex.pdf',
+  page,
+  note: '以下为原题题意的中文翻译；原文和参考图见来源 PDF。为自动评测另行指定类名与建模要求，见下方评测约定。',
+})
+
+const baseProblems: Problem[] = [
   {
     id: 'learn-class', title: '第 1 关：认识类', level: '教学 · 1 分钟',
     description: '类是对同一种事物的描述，例如学生、图书、订单。类图里的一个矩形就是一个类。这一关只创建一个类，不需要属性和连线。',
@@ -70,7 +84,7 @@ export const problems: Problem[] = [
     hint: '在两个类声明后，添加 Student -- Course。这里是两个减号，不是继承箭头，也不要用星号或菱形。',
     lesson: {
       concept: 'A -- B 表示 A 与 B 有普通关联。连线不是属性，应该写在类声明外。',
-      steps: ['模板中已经声明了两个类，不用重复创建。', '在 TODO 下方加一行 Student -- Course。', '也可以点击画布的“添加关联”，选择起点和终点并应用；本关无需多重性。'],
+      steps: ['模板中已经声明了两个类，不用重复创建。', '在 TODO 下方加一行 Student -- Course。', '也可以从画布中 Student 左右的连接点拖到 Course，或点击“添加关联”选择起点和终点；本关无需多重性。'],
       example: 'class Customer\nclass Order\nCustomer -- Order',
       starter: '@startuml\nclass Student\nclass Course\n\' TODO：在下面连接学生和课程\n\n@enduml',
       solution: '@startuml\nclass Student\nclass Course\nStudent -- Course\n@enduml',
@@ -131,7 +145,7 @@ export const problems: Problem[] = [
     hint: '分别编辑 Searchable 和 Exportable 的方法列表；两个接口不能用普通类替代。',
     lesson: {
       concept: '不同接口可以分别表达不同能力。当前练习只创建接口及其操作，不要求类实现接口。',
-      steps: ['点击 Searchable 接口并添加 search 方法，应用更改。', '点击“添加接口”，将新接口命名为 Exportable，添加 export 方法并应用。', '提交评测；无需绘制连线。'],
+      steps: ['点击 Searchable 接口并添加 search 方法，应用更改。', '在“添加元素”中选择接口，将新接口命名为 Exportable，添加 export 方法并应用。', '提交评测；无需绘制连线。'],
       example: 'interface Searchable {\n  + search()\n}\ninterface Exportable {\n  + export()\n}',
       starter: '@startuml\ninterface Searchable\n@enduml',
       solution: '@startuml\ninterface Searchable {\n  + search()\n}\ninterface Exportable {\n  + export()\n}\n@enduml',
@@ -244,6 +258,87 @@ export const problems: Problem[] = [
     },
     hint: '从一条 Comment 出发，沿你选择的路径走一遍。每一步都必须只有一个上一级对象；另一方向则允许多个下一级对象。',
   },
+  {
+    id: 'turin-university', title: '都灵练习：大学', level: '原题参考 · 暂无自动评测',
+    description: '为大学的教室、办公室、院系和工作人员建立类图。',
+    requirements: [
+      '大学中有不同的教室、办公室和院系。院系有名称，包含多间办公室。',
+      '在大学工作的人有唯一 ID，可以是教授或职员。',
+      '教授可以是正教授、副教授或助理教授；每位教授隶属于一个院系。',
+      '办公室和教室有编号，教室还有座位数。',
+      '每位职员在一间办公室工作。',
+    ],
+    classes: [], relations: [],
+    hint: '原题参考图见来源 PDF 第 2 页。', source: turinSource(1),
+  },
+  {
+    id: 'turin-movie-shop', title: '都灵练习：影片商店', level: '原题参考 · 暂无自动评测',
+    description: '为影片商店设计一个系统，处理影片订购、商店目录浏览，以及带可充值卡的用户订阅。',
+    requirements: [
+      '只有订阅用户可以使用自己的卡租借影片。',
+      '租借时更新卡上的余额。',
+      '普通用户和订阅用户都可以购买影片，其信息保存在相应订单中。',
+      '当影片缺货时，需要订购该影片。',
+    ],
+    classes: [], relations: [],
+    hint: '原题参考图见来源 PDF 第 3 页。', source: turinSource(2),
+  },
+  {
+    id: 'turin-flights', title: '都灵练习：航班', level: '原题参考 · 暂无自动评测',
+    description: '为航班与飞行员管理系统建立模型。',
+    requirements: [
+      '航空公司运营航班，每家航空公司有一个 ID。每个航班有 ID、出发机场和到达机场；机场有唯一标识。',
+      '每个航班有一名飞行员和一名副驾驶，使用某种型号的一架飞机，并有出发时间和到达时间。',
+      '航空公司拥有不同型号的一组飞机。飞机可以处于正常工作或维修状态；在特定时刻，飞机可以在地面或在空中。',
+      '航空公司有一组飞行员。每位飞行员有经验等级，最低为 1，最高为 3。',
+      '某种飞机型号可能需要特定数量、不同角色的飞行员，例如机长、副驾驶和领航员；至少需要一名机长和一名副驾驶，且机长的经验等级必须为 3。',
+    ],
+    classes: [], relations: [],
+    hint: '原题参考图见来源 PDF 第 4 页。', source: turinSource(3),
+  },
+  {
+    id: 'turin-bank', title: '都灵练习：银行系统', level: '原题参考 · 暂无自动评测',
+    description: '为银行系统建立类图。',
+    requirements: [
+      '系统保存客户及其账户的数据；客户通过姓名和地址标识。',
+      '每个账户都有余额。账户分为两类：提供利率的储蓄账户，以及用于购买股票的投资账户。',
+      '购买股票时记录一定的数量和价格（原文为 ticker）；银行对股票订单收取佣金。',
+    ],
+    classes: [], relations: [],
+    hint: '原题参考图见来源 PDF 第 5 页；ticker 在原文中的表述可结合参考图理解。', source: turinSource(4),
+  },
+  {
+    id: 'turin-hospital', title: '都灵练习：医院', level: '原题参考 · 暂无自动评测',
+    description: '为医院、科室、工作人员和手术室建立模型。',
+    requirements: [
+      '医院有 ID、名称和地址。',
+      '医院工作人员有在医院内唯一的 ID、姓、名、出生日期、地址以及儿子数量。',
+      '工作人员可以是医生、职员或护士；医生有专长列表，职员有角色。',
+      '医院分为多个科室；科室有代码、名称和床位数。每个科室需要记录其主任医生和全部工作人员。',
+      '每个科室可以管理手术室。手术室通过名称、ID 和手术台数量描述。',
+    ],
+    classes: [], relations: [],
+    hint: '原题参考图见来源 PDF 第 6 页。', source: turinSource(5),
+  },
+  {
+    id: 'turin-library', title: '都灵练习：图书馆', level: '原题参考 · 暂无自动评测',
+    description: '为图书馆、学生借阅和图书出版信息建立模型。',
+    requirements: [
+      '图书馆有可由学生借阅的图书，学生通过 ID 标识。',
+      '图书有图书馆编号、书名、一位或多位作者以及页数。',
+      '作者有名和姓，可以写多篇手稿；手稿可以在不同图书中出版。',
+      '每本图书有一位 editor（原文用词）；一本图书可以由不同 editor 在不同日期提供。',
+      '学生借阅的图书不能超过三本；每本图书有借阅起始日期和归还日期。',
+    ],
+    classes: [], relations: [],
+    hint: '原题参考图见来源 PDF 第 7 页。原文使用 editor，且两个涉及 editor 的描述需结合原题和参考图理解。', source: turinSource(6),
+  },
 ]
+
+// Keep original exercise statements distinct from the explicit OJ conventions.
+export const problems: Problem[] = baseProblems.map(problem => {
+  const assessment = turinAssessments[problem.id]
+  return assessment ? { ...problem, ...assessment, level: '都灵原题 · 静态结构评测' } : problem
+})
 
 export const emptySource = '@startuml\n\' 在这里编写类、属性和关联；请使用题目指定的英文名称。\n\n@enduml'

@@ -41,6 +41,7 @@ html[data-theme="dark"] .learning-progress progress::-webkit-progress-value { ba
 html[data-theme="dark"] .learning-progress progress { accent-color: #217dbb; }
 html[data-theme="dark"] .problem-tag { border-radius: 3px; background: #217dbb; color: #fff; }
 html[data-theme="dark"] .lead { color: #d0d1d3; }
+html[data-theme="dark"] .problem-source a { color: #75bdf0; }
 html[data-theme="dark"] .statement ol,
 html[data-theme="dark"] .guide-body ol { color: #dedfe0; }
 html[data-theme="dark"] .statement li::marker,

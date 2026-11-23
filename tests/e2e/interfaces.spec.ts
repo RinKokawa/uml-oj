@@ -51,6 +51,7 @@ test('lesson 7 creates two interfaces and preserves them across reload', async (
   await page.getByRole('button', { name: '添加方法' }).click()
   await page.getByLabel('方法 1 名称').fill('search')
   await page.getByRole('button', { name: '应用更改' }).click()
+  await page.getByRole('button', { name: '添加元素' }).click()
   await page.getByRole('button', { name: '添加接口' }).click()
   await page.getByLabel('接口名').fill('Exportable')
   await page.getByRole('button', { name: '添加方法' }).click()
