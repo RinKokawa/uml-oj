@@ -50,3 +50,45 @@ test('splitter adjusts statement width by keyboard and pointer without losing so
   expect(Number(await separator.getAttribute('aria-valuenow'))).toBeLessThan(34)
   await expect(source).toHaveValue('@startuml\nclass Example\n@enduml')
 })
+
+test('failed checks appear before passed checks in the report', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: '正式挑战', exact: true }).click()
+  await page.getByRole('button', { name: '开始作答：项目管理系统' }).click()
+  await page.getByRole('textbox', { name: 'PlantUML source' }).fill('@startuml\nclass Developer\n@enduml')
+  await page.getByRole('button', { name: '提交评测' }).click()
+  await expect(page.locator('.score')).toContainText('7 项待修正')
+  await expect(page.locator('.result-row').first()).toHaveClass(/result-needs-fix/)
+  await expect(page.locator('.result-row').last()).toContainText('PASS')
+})
+
+test('resize canvas and report independently and keep the answer when switching focus', async ({ page }) => {
+  await page.setViewportSize({ width: 1366, height: 900 })
+  await page.goto('/')
+  await page.getByRole('button', { name: '正式挑战', exact: true }).click()
+  await page.getByRole('button', { name: '开始作答：项目管理系统' }).click()
+  const canvas = page.getByRole('separator', { name: '调整画布和源码宽度' })
+  const report = page.getByRole('separator', { name: '调整评测报告高度' })
+  const source = page.getByRole('textbox', { name: 'PlantUML source' })
+  const answer = '@startuml\nclass Developer\n@enduml'
+  await source.fill(answer)
+  const widthBefore = (await source.boundingBox())!.width
+  await canvas.press('ArrowLeft')
+  expect((await source.boundingBox())!.width).toBeGreaterThan(widthBefore)
+  await page.getByRole('button', { name: '专注画布', exact: true }).click()
+  await expect(canvas).toHaveCount(0)
+  await page.getByRole('button', { name: '显示源码', exact: true }).click()
+  await expect(source).toHaveValue(answer)
+  await page.getByRole('button', { name: '提交评测', exact: true }).click()
+  const h0 = (await page.locator('.feedback-anchor').boundingBox())!.height
+  const box = (await report.boundingBox())!
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(box.x + box.width / 2, box.y - 100, { steps: 6 })
+  await page.mouse.up()
+  expect((await page.locator('.feedback-anchor').boundingBox())!.height).toBeGreaterThan(h0)
+  await expect(source).toHaveValue(answer)
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect(canvas).toHaveCount(0)
+  await expect(report).toHaveCount(0)
+})

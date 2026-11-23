@@ -3,7 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, toRaw, watch } fro
 import {
   ArrowDown, ArrowLeft, ArrowLeftRight, ArrowRight, ArrowUp, BookOpen,
   Check, ChevronDown, ChevronRight, ChevronUp, Circle, ClipboardCheck,
-  CodeXml, CornerDownLeft, FileCode2, FileText, Moon, Network, Play, Sun, X,
+  CodeXml, CornerDownLeft, FileCode2, FileText, Moon, Network, Play, Search, Sun, X,
   setLucideProps,
 } from '@lucide/vue'
 import { emptySource, problems } from './problems'
@@ -30,10 +30,20 @@ async function toggleTheme() {
 const problemPanel = ref<HTMLElement | null>(null)
 const feedback = ref<HTMLElement | null>(null)
 const layout = ref<HTMLElement | null>(null)
+const editorPanes = ref<HTMLElement | null>(null)
+const workspace = ref<HTMLElement | null>(null)
 const isNarrow = ref(typeof window !== 'undefined' && window.innerWidth <= 760)
-function updateViewport() { isNarrow.value = window.innerWidth <= 760 }
+const isWide = ref(window.innerWidth >= 1100)
+function updateViewport() {
+  isNarrow.value = window.innerWidth <= 760
+  isWide.value = window.innerWidth >= 1100
+}
 const problemWidth = ref(32)
 const feedbackOpen = ref(false)
+const canvasWidth = ref<number | null>(null)
+const feedbackHeight = ref<number | null>(null)
+const canvasPercent = computed(() => canvasWidth.value ?? (isWide.value ? 62.5 : 50))
+const reportPercent = computed(() => feedbackHeight.value ?? 32)
 const guideOpen = ref(true)
 const problemVisible = ref(true)
 const emptyDiagram = (): Diagram => ({ classes: [], relations: [] })
@@ -69,12 +79,33 @@ const challenges = problems.filter(p => !p.lesson)
 type Section = 'tutorial' | 'challenge'
 const section = computed<Section>(() => problem.value.lesson ? 'tutorial' : 'challenge')
 const sectionProblems = computed(() => section.value === 'tutorial' ? lessons : challenges)
+const catalogQuery = ref('')
+const catalogFilter = ref<'all' | 'remaining' | 'completed'>('all')
+const catalogFilters = [
+  { id: 'all', label: '全部' },
+  { id: 'remaining', label: '未完成' },
+  { id: 'completed', label: '已完成' },
+] as const
+const catalogEntries = computed(() => {
+  const query = catalogQuery.value.trim().toLowerCase()
+  return sectionProblems.value.map((item, index) => ({ item, index })).filter(({ item }) => {
+    if (catalogFilter.value !== 'all' && completed.value.has(item.id) !== (catalogFilter.value === 'completed')) return false
+    return !query || [item.title, item.description, item.level].some(text => text.toLowerCase().includes(query))
+  })
+})
+function resetCatalogFilters() {
+  catalogQuery.value = ''
+  catalogFilter.value = 'all'
+}
 const lastSelected: Record<Section, string> = { tutorial: lessons[0].id, challenge: challenges[0].id }
 const nextProblem = computed(() => sectionProblems.value[sectionProblems.value.findIndex(p => p.id === selectedId.value) + 1])
 const challengeProgress = computed(() => challenges.filter(p => completed.value.has(p.id)).length)
 async function switchSection(target: Section) {
   if (!(await leaveCanvasSafely())) return
-  if (target !== section.value) openProblem(lastSelected[target])
+  if (target !== section.value) {
+    resetCatalogFilters()
+    openProblem(lastSelected[target])
+  }
   view.value = 'catalog'
   window.scrollTo({ top: 0 })
 }
@@ -92,6 +123,10 @@ const accepted = computed(() => !!results.value?.length && passed.value === resu
 const lessonProgress = computed(() => lessons.filter(p => completed.value.has(p.id)).length)
 const notice = ref('源码和本地画布共用同一份答案；画布编辑请先应用更改。')
 const passed = computed(() => results.value?.filter(r => r.passed).length ?? 0)
+const reportRows = computed(() => {
+  const rows = results.value ?? []
+  return [...rows.filter(r => !r.passed), ...rows.filter(r => r.passed)]
+})
 type Draft = { source: string; model: Diagram; sourceMode: boolean; syncedKey: string | null; sourceFormat?: SourceFormat; sourceVariants?: Partial<Record<SourceFormat, SourceVariant>>; evaluated?: boolean }
 const drafts = new Map<string, Draft>()
 const storageAvailable = ref(true)
@@ -202,6 +237,42 @@ function resizeWithKeyboard(event: KeyboardEvent) {
   if (!layout.value) return
   const rect = layout.value.getBoundingClientRect()
   setProblemWidth(rect.left + rect.width * (problemWidth.value + (event.key === 'ArrowLeft' ? -2 : 2)) / 100)
+}
+type WorkbenchSplit = 'canvas' | 'report'
+const liveSplits = new Map<WorkbenchSplit, number>()
+function setWorkbenchSplit(split: WorkbenchSplit, value: number) {
+  const [min, max] = split === 'canvas' ? [34, 72] : [24, 55]
+  const size = Math.round(Math.max(min, Math.min(max, value)))
+  if (split === 'canvas') canvasWidth.value = size
+  else feedbackHeight.value = size
+}
+function startWorkbenchSplit(event: PointerEvent, split: WorkbenchSplit) {
+  if (event.button !== 0 || !event.isPrimary) return
+  const handle = event.currentTarget as HTMLElement
+  liveSplits.set(split, event.pointerId)
+  handle.setPointerCapture(event.pointerId)
+}
+function moveWorkbenchSplit(event: PointerEvent, split: WorkbenchSplit) {
+  if (liveSplits.get(split) !== event.pointerId) return
+  const rect = (split === 'canvas' ? editorPanes : workspace).value?.getBoundingClientRect()
+  if (!rect) return
+  if (split === 'canvas') setWorkbenchSplit(split, (event.clientX - rect.left - 4) / (rect.width - 8) * 100)
+  else setWorkbenchSplit(split, (rect.bottom - event.clientY - 4) / rect.height * 100)
+}
+function stopWorkbenchSplit(event: PointerEvent, split: WorkbenchSplit) {
+  if (liveSplits.get(split) === event.pointerId) liveSplits.delete(split)
+}
+function keyboardWorkbenchSplit(event: KeyboardEvent, split: WorkbenchSplit) {
+  const [increase, decrease, current] = split === 'canvas'
+    ? ['ArrowRight', 'ArrowLeft', canvasPercent.value] as const
+    : ['ArrowUp', 'ArrowDown', reportPercent.value] as const
+  if (event.key === 'Home' || event.key === 'End') {
+    event.preventDefault()
+    setWorkbenchSplit(split, event.key === 'Home' ? 0 : 100)
+  } else if (event.key === increase || event.key === decrease) {
+    event.preventDefault()
+    setWorkbenchSplit(split, current + (event.key === increase ? 4 : -4))
+  }
 }
 function toggleProblemPanel() {
   problemVisible.value = !problemVisible.value
@@ -503,7 +574,7 @@ onBeforeUnmount(() => {
 <template>
   <div class="app-shell" :class="{ 'in-workspace': view === 'workspace' }">
     <header class="topbar">
-      <div class="brand"><span class="brand-mark" aria-hidden="true">U</span><span>UML <b>OJ</b></span></div>
+      <div class="brand"><span class="brand-mark" aria-hidden="true"><Network /></span><span>UML <b>OJ</b></span></div>
       <nav class="section-nav" aria-label="练习分区">
         <button :class="{ active: section === 'tutorial' }" :aria-current="section === 'tutorial' ? 'page' : undefined" :disabled="transitioning" @click="switchSection('tutorial')">教学关卡</button>
         <button :class="{ active: section === 'challenge' }" :aria-current="section === 'challenge' ? 'page' : undefined" :disabled="transitioning" @click="switchSection('challenge')">正式挑战</button>
@@ -515,18 +586,25 @@ onBeforeUnmount(() => {
     </header>
     <main v-if="view === 'catalog'" class="catalog">
       <div class="catalog-heading">
-        <div><div class="eyebrow">{{ section === 'tutorial' ? 'UML 入门' : '独立练习' }}</div><h1>{{ section === 'tutorial' ? '教学关卡' : '正式题库' }}</h1><p>{{ section === 'tutorial' ? '从认识类到理解多重性，一关一个知识点。' : '根据业务需求独立建模，用测试验证你的答案。' }}</p></div>
-        <div class="catalog-progress"><strong>{{ section === 'tutorial' ? lessonProgress : challengeProgress }}<span> / {{ sectionProblems.length }}</span></strong><span>已完成</span></div>
+        <div><h1>{{ section === 'tutorial' ? '教学关卡' : '正式题库' }}</h1><p>{{ section === 'tutorial' ? '从认识类到多重性，一关一个知识点。' : '按题目要求建模，再提交评测。' }}</p></div>
+        <div class="catalog-progress"><span>已完成</span><strong>{{ section === 'tutorial' ? lessonProgress : challengeProgress }}<span> / {{ sectionProblems.length }}</span></strong></div>
       </div>
       <div v-if="!storageAvailable" class="storage-warning" role="alert">浏览器存储不可用或草稿无法恢复。请导出答案；关闭或刷新页面可能丢失修改。</div>
       <section class="catalog-list" :aria-label="section === 'tutorial' ? '教学关卡列表' : '正式题目列表'">
-        <div class="catalog-list-head"><span>{{ section === 'tutorial' ? '学习路径' : '题目' }}</span><span>状态</span></div>
-        <article v-for="(p, i) in sectionProblems" :key="p.id" class="catalog-row">
-          <div class="catalog-number">{{ String(i + 1).padStart(2, '0') }}</div>
+        <div class="catalog-controls">
+          <div class="catalog-filters" role="group" aria-label="按完成状态筛选">
+            <button v-for="filter in catalogFilters" :key="filter.id" :aria-pressed="catalogFilter === filter.id" @click="catalogFilter = filter.id">{{ filter.label }}</button>
+          </div>
+          <label class="catalog-search"><Search :size="14" /><input v-model="catalogQuery" type="search" aria-label="搜索题目" placeholder="搜索题目" /></label>
+        </div>
+        <div class="catalog-list-head"><span>{{ section === 'tutorial' ? '学习路径' : '挑战列表' }}</span><span role="status">{{ catalogEntries.length }} 道题</span></div>
+        <article v-for="{ item: p, index } in catalogEntries" :key="p.id" class="catalog-row">
+          <div class="catalog-number">{{ String(index + 1).padStart(2, '0') }}</div>
           <div class="catalog-copy"><h2><button class="catalog-title" @click="enterProblem(p.id)">{{ p.title }}</button></h2><p>{{ p.description }}</p><span class="catalog-level">{{ p.level }}</span></div>
           <div class="catalog-status" :class="{ done: completed.has(p.id) }"><Check v-if="completed.has(p.id)" :size="14" />{{ completed.has(p.id) ? '已完成' : '未完成' }}</div>
           <button class="catalog-enter" :aria-label="`${section === 'tutorial' ? '开始学习' : '开始作答'}：${p.title}`" @click="enterProblem(p.id)">{{ section === 'tutorial' ? '开始学习' : '开始作答' }} <ArrowRight :size="14" /></button>
         </article>
+        <div v-if="!catalogEntries.length" class="catalog-empty"><p>没有符合条件的题目。</p><button @click="resetCatalogFilters">清除搜索和筛选</button></div>
       </section>
       <p class="catalog-note">{{ storageAvailable ? '进度和草稿保存在当前浏览器中。' : '存储不可用，当前进度仅在本页有效。' }}</p>
     </main>
@@ -577,7 +655,7 @@ onBeforeUnmount(() => {
         </div>
       </aside>
       <div v-show="problemVisible" class="panel-resizer" role="separator" tabindex="0" aria-label="调整题面宽度" aria-orientation="vertical" :aria-valuenow="problemWidth" aria-valuemin="25" aria-valuemax="65" @pointerdown="startResize" @keydown="resizeWithKeyboard"><span></span></div>
-      <section id="workspace" class="workspace" aria-label="建模工作区">
+      <section id="workspace" ref="workspace" class="workspace" aria-label="建模工作区">
         <a v-show="problemVisible" class="mobile-back" href="#problem-panel"><ArrowUp /> 返回题目和提示</a>
         <div class="workspace-head">
           <div class="workspace-title"><h2>开始建模</h2></div>
@@ -596,11 +674,15 @@ onBeforeUnmount(() => {
           </div>
           <span class="sync-indicator"><ArrowLeftRight /> 自动同步</span>
         </div>
-        <div class="editor-panes" :class="{ 'canvas-focus': canvasFocus && !isNarrow }">
-          <div v-show="!isNarrow || !sourceMode" class="visual-pane">
+        <div ref="editorPanes" class="editor-panes" :class="{ 'canvas-focus': canvasFocus && !isNarrow }" :style="{ '--canvas-share': `${canvasPercent}%` }">
+          <div id="canvas-pane" v-show="!isNarrow || !sourceMode" class="visual-pane">
             <div class="pane-heading">可视化画布 <span v-if="syncState !== 'synced'" class="stale-label">{{ syncState === 'canvas-error' ? '请修正画布' : '画布未同步' }}</span></div>
             <NativeCanvas ref="canvas" :diagram="answer" :problem-id="selectedId" :disabled="syncState !== 'synced' || transitioning" :on-apply="applyCanvasChange" @dirty="onCanvasDirty" />
           </div>
+          <div v-if="!isNarrow && !canvasFocus" class="workbench-splitter" role="separator" tabindex="0"
+            aria-label="调整画布和源码宽度" aria-controls="canvas-pane" aria-orientation="vertical" aria-valuemin="34" aria-valuemax="72" :aria-valuenow="canvasPercent"
+            @pointerdown="startWorkbenchSplit($event, 'canvas')" @pointermove="moveWorkbenchSplit($event, 'canvas')"
+            @lostpointercapture="stopWorkbenchSplit($event, 'canvas')" @keydown="keyboardWorkbenchSplit($event, 'canvas')"><span></span></div>
           <div id="source-pane" v-show="sourceVisible" class="source-wrap">
             <div class="source-label"><span class="icon-label"><FileCode2 class="file-icon" :size="14" />{{ sourceFormat === 'plantuml' ? 'solution.puml' : 'solution.mmd' }}</span><label>源码格式 <select :value="sourceFormat" aria-label="源码格式" :disabled="transitioning" @change="changeSourceFormat"><option value="plantuml">PlantUML</option><option value="mermaid">Mermaid</option></select></label></div>
             <textarea ref="sourceElement" v-model="source" spellcheck="false" :readonly="syncState === 'canvas-error' || syncState === 'conflict' || canvasDirty" :aria-label="sourceFormat === 'plantuml' ? 'PlantUML source' : 'Mermaid source'"></textarea>
@@ -623,7 +705,11 @@ Example "1" -- "0..*" OtherExample</pre>
         <div v-if="canvasDirty" class="sync-warning" role="status">画布编辑面板有未应用的内容，请先应用或撤销，再编辑源码或提交。</div>
         <div v-if="syncState === 'conflict'" class="sync-conflict" role="alert"><span>源码与画布不一致，提交已暂停。请选择要继续使用的内容；另一侧将先备份到本机。</span><button class="secondary" @click="resolveSyncConflict('source')">使用源码</button><button class="secondary" @click="resolveSyncConflict('canvas')">使用画布</button></div>
         <div v-if="!storageAvailable" class="storage-warning workspace-warning" role="alert">浏览器存储不可用或草稿无法恢复，请导出答案；刷新可能丢失修改。</div>
-        <div ref="feedback" class="feedback-anchor" :class="{ expanded: feedbackOpen }">
+        <div ref="feedback" class="feedback-anchor" :class="{ expanded: feedbackOpen }" :style="{ '--report-share': feedbackHeight === null ? undefined : `${feedbackHeight}%` }">
+        <div v-if="feedbackOpen && !isNarrow" class="workbench-splitter split-horizontal" role="separator" tabindex="0"
+          aria-label="调整评测报告高度" aria-controls="feedback-content" aria-orientation="horizontal" aria-valuemin="24" aria-valuemax="55" :aria-valuenow="reportPercent"
+          @pointerdown="startWorkbenchSplit($event, 'report')" @pointermove="moveWorkbenchSplit($event, 'report')"
+          @lostpointercapture="stopWorkbenchSplit($event, 'report')" @keydown="keyboardWorkbenchSplit($event, 'report')"><span></span></div>
         <button class="feedback-toggle" :aria-expanded="feedbackOpen" aria-controls="feedback-content" @click="feedbackOpen = !feedbackOpen"><span class="icon-label"><ClipboardCheck class="panel-icon" />评测结果 <span v-if="results" class="feedback-summary" :class="accepted ? 'ok' : 'fail'">{{ accepted ? '通过' : '未通过' }} · {{ passed }}/{{ results.length }}</span><span v-else-if="error" class="feedback-summary fail">输入错误</span><span v-else class="feedback-empty">当前答案未评测</span></span><ChevronDown v-if="feedbackOpen" /><ChevronUp v-else /></button>
         <div v-show="feedbackOpen" id="feedback-content" class="feedback-content">
         <p v-if="!error && !results" class="feedback-placeholder">提交后在这里查看逐项评测结果。</p>
@@ -631,7 +717,7 @@ Example "1" -- "0..*" OtherExample</pre>
         <section v-if="results" class="results" aria-live="polite">
           <div class="result-head">
             <div><div class="eyebrow">评测结果</div><h2>{{ problem.title }} · 评测报告</h2></div>
-            <div class="score"><strong>{{ passed }}/{{ results.length }}</strong><span>测试通过</span></div>
+            <div class="score"><strong>{{ passed }}/{{ results.length }}</strong><span>{{ accepted ? '测试通过' : `${results.length - passed} 项待修正` }}</span></div>
           </div>
           <div class="verdict" :class="accepted ? 'accepted' : 'wrong'"><Check v-if="accepted" /><X v-else />{{ problem.lesson ? (accepted ? '本关通过！' : '再试一下，下面还有提示') : (accepted ? 'ACCEPTED' : 'WRONG ANSWER') }}</div>
           <div v-if="accepted && problem.lesson" class="lesson-complete">
@@ -639,7 +725,7 @@ Example "1" -- "0..*" OtherExample</pre>
             <button v-if="nextProblem" class="primary" @click="goNext">进入下一关 <ArrowRight /></button>
             <div v-else><b>全部教学已完成。</b><p>想独立练习时，可以从顶部的“正式挑战”进入题库；也可以留在这里复习。</p></div>
           </div>
-          <div v-for="r in results" :key="r.id" class="result-row">
+          <div v-for="r in reportRows" :key="r.id" class="result-row" :class="{ 'result-needs-fix': !r.passed }">
             <span class="result-icon" :class="r.passed ? 'ok' : 'fail'" aria-hidden="true"><Check v-if="r.passed" :size="14" /><X v-else :size="14" /></span>
             <div class="result-copy"><b>{{ r.title }}</b><small>{{ r.detail }}</small></div>
             <span class="result-state" :class="r.passed ? 'ok' : 'fail'">{{ r.passed ? 'PASS' : 'FAIL' }}</span>
