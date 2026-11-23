@@ -1,3 +1,9 @@
+type Relation = [string, string, string | null, string | null]
+type RelationAlternative = {
+  relations: [string, string, string, string][]
+  absent: [string, string][]
+}
+
 export type Problem = {
   id: string
   title: string
@@ -6,7 +12,13 @@ export type Problem = {
   requirements: string[]
   classes: { name: string; attributes: string[] }[]
   interfaces?: { name: string; methods: string[] }[]
-  relations: [string, string, string | null, string | null][]
+  relations: Relation[]
+  relationAlternatives?: {
+    id: string
+    title: string
+    failure: string
+    options: RelationAlternative[]
+  }
   hint: string
   lesson?: {
     concept: string
@@ -163,6 +175,74 @@ export const problems: Problem[] = [
     ],
     relations: [['Reader', 'Loan', '1', '0..*'], ['Book', 'Loan', '1', '0..*']],
     hint: '借阅日期属于“一次借阅”，不属于读者或图书本身。多重性标在谁那一端，就表示对面的一个对象可关联多少个这一端的对象。',
+  },
+  {
+    id: 'indie-radar',
+    title: '独游雷达：同一个团队，三个账号',
+    level: '中等 · 预计 10–15 分钟',
+    description: '一个独游团队会在多个平台发开发日志。一条日志有时同时提到几款游戏。读者既要找到游戏的相关日志，也要知道原帖是哪个账号发的。',
+    requirements: [
+      '分别建立创作者 Creator（name）、平台账号 PlatformAccount（platform、handle）、开发日志 Devlog（title、url）和游戏 Game（title）四个类。',
+      '一个创作者可以绑定零到多个账号；本题只建模已绑定的账号，每个账号只归一个创作者。',
+      '一个账号可以发布零到多篇日志；每篇日志恰好来自一个账号。',
+      '一篇日志可以提到零到多款游戏；一款游戏也可以出现在零到多篇日志里。',
+      '使用普通关联，标注两端多重性；属性类型、可见性和画布布局不判分。',
+    ],
+    classes: [
+      { name: 'Creator', attributes: ['name'] },
+      { name: 'PlatformAccount', attributes: ['platform', 'handle'] },
+      { name: 'Devlog', attributes: ['title', 'url'] },
+      { name: 'Game', attributes: ['title'] },
+    ],
+    relations: [['Creator', 'PlatformAccount', '1', '0..*'], ['PlatformAccount', 'Devlog', '1', '0..*'], ['Devlog', 'Game', '0..*', '0..*']],
+    hint: '试着问：是团队发布了这条原帖，还是团队的某个账号发布了它？游戏与日志的关系不要固定成一个方向的一对多。',
+  },
+  {
+    id: 'renovation-inspections',
+    title: '装修大师：验收没过，原记录不能覆盖',
+    level: '中等 · 预计 10–15 分钟',
+    description: '同一施工项可能一次通过，也可能返工几次才通过。项目经理想查看每一次验收，而不只是最终结果。',
+    requirements: [
+      '建立工单 WorkOrder（orderNo）、施工项 WorkItem（name）、验收记录 Inspection（checkedAt、result、notes）三个类。',
+      '一张工单可以先建单、后拆项，因此可以包含零到多个施工项；每个施工项只属于一张工单。',
+      '每个施工项可以没有验收记录，也可以有多条；每条验收记录恰好对应一个施工项。',
+      '使用普通关联，标注两端多重性。本题只评测模型能否表示多次验收，不测试应用是否会覆盖旧记录。',
+    ],
+    classes: [
+      { name: 'WorkOrder', attributes: ['orderNo'] },
+      { name: 'WorkItem', attributes: ['name'] },
+      { name: 'Inspection', attributes: ['checkedAt', 'result', 'notes'] },
+    ],
+    relations: [['WorkOrder', 'WorkItem', '1', '0..*'], ['WorkItem', 'Inspection', '1', '0..*']],
+    hint: '把“时间、结果、备注”放在发生一次就增加一条记录的地方，而不是放在施工项上覆盖。',
+  },
+  {
+    id: 'manuscript-reviews',
+    title: '「终稿_v7」的批注挂在哪一版？',
+    level: '进阶 · 多解 · 预计 15–20 分钟',
+    description: '写作团队发布新版稿件后，读者还要找得到旧批注原本审阅的版本。请用类图表示批注如何定位到恰好一个稿件版本。',
+    requirements: [
+      '建立稿件 Manuscript（title）、稿件版本 Revision（versionNo）、批注 Comment（body）三个类。',
+      '一篇稿件可以有零到多个版本，每个版本只属于一篇稿件。使用普通关联并标注两端多重性。',
+      '选一种建模方式：每条批注直接归属一个版本，或每条批注归属一次审阅 Review、每次审阅只对应一个版本。版本可有零到多条直接批注，或零到多次审阅；一次审阅可有零到多条批注。',
+      '所选路径的每对类之间只画一条普通关联，不能混用两条路径，也不要额外把 Comment 连到 Manuscript。本题不检查发布新版时程序实际怎么更新数据。',
+    ],
+    classes: [
+      { name: 'Manuscript', attributes: ['title'] },
+      { name: 'Revision', attributes: ['versionNo'] },
+      { name: 'Comment', attributes: ['body'] },
+    ],
+    relations: [['Manuscript', 'Revision', '1', '0..*']],
+    relationAlternatives: {
+      id: 'comment-revision-path',
+      title: '每条批注能通过一种路径定位到唯一版本',
+      failure: '请选择批注直连版本，或通过 Review 类连接版本。每段只画一条普通关联，将上一级的多重性标为 1，下一级标为 0..*；不要混用路径或把批注直接连到稿件。',
+      options: [
+        { relations: [['Revision', 'Comment', '1', '0..*']], absent: [['Comment', 'Manuscript'], ['Comment', 'Review']] },
+        { relations: [['Revision', 'Review', '1', '0..*'], ['Review', 'Comment', '1', '0..*']], absent: [['Comment', 'Manuscript'], ['Comment', 'Revision']] },
+      ],
+    },
+    hint: '从一条 Comment 出发，沿你选择的路径走一遍。每一步都必须只有一个上一级对象；另一方向则允许多个下一级对象。',
   },
 ]
 

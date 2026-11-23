@@ -43,18 +43,34 @@ export function judge(model: Model, problem: Problem): TestResult[] {
     }
   }
   const multiplicity = (s: string) => s.replace(/\s/g, '').replace(/^\*$/, '0..*').replace(/^1\.\.1$/, '1')
-  for (const [a, b, ma, mb] of problem.relations) {
-    const edges = model.relations.flatMap(e => {
-      if (!e.association) return []
+  const edgesBetween = (a: string, b: string) =>
+    model.relations.flatMap(e => {
       if (normalize(e.source) === normalize(a) && normalize(e.target) === normalize(b)) return [e]
       if (normalize(e.source) === normalize(b) && normalize(e.target) === normalize(a)) return [{ ...e, sourceMultiplicity: e.targetMultiplicity, targetMultiplicity: e.sourceMultiplicity }]
       return []
     })
+  const hasMultiplicities = (edge: Model['relations'][number], a: string, b: string) =>
+    multiplicity(edge.sourceMultiplicity) === a && multiplicity(edge.targetMultiplicity) === b
+  for (const [a, b, ma, mb] of problem.relations) {
+    const edges = edgesBetween(a, b).filter(e => e.association)
     check(`rel-${a}-${b}`, `${a} 与 ${b} 存在普通关联`, edges.length > 0, `请使用普通关联连接 ${a} 与 ${b}，继承、依赖、聚合或组合不能替代。`)
     if (ma === null || mb === null) continue
     check(`mult-${a}-${b}`,  `${a} 端 ${ma}，${b} 端 ${mb}`,
-      edges.some(e => multiplicity(e.sourceMultiplicity) === ma && multiplicity(e.targetMultiplicity) === mb),
+      edges.some(e => hasMultiplicities(e, ma, mb)),
       `请在同一条普通关联的 ${a} 端填写 ${ma}，${b} 端填写 ${mb}。`)
+  }
+  if (problem.relationAlternatives) {
+    const { id, title, failure, options } = problem.relationAlternatives
+    const isClass = (name: string) =>
+      model.classes.filter(c => c.kind !== 'interface' && normalize(c.name) === normalize(name)).length === 1
+    const passed = options.some(option =>
+      option.absent.every(([a, b]) => edgesBetween(a, b).length === 0) &&
+      option.relations.every(([a, b, ma, mb]) => {
+        const [edge, ...extra] = edgesBetween(a, b)
+        return isClass(a) && isClass(b) && !!edge && !extra.length && edge.association && hasMultiplicities(edge, ma, mb)
+      }),
+    )
+    check(id, title, passed, failure)
   }
   return results
 }

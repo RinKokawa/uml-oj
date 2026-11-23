@@ -2,13 +2,14 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { fromDiagram, judge } from '../src/judge.ts'
 import { parsePlantUml } from '../src/uml/adapters/plantuml.ts'
+import { parseMermaid, toMermaid } from '../src/uml/adapters/mermaid.ts'
 const fromPlantUml = text => fromDiagram(parsePlantUml(text))
 import { problems, emptySource } from '../src/problems.ts'
 
-function answer(problem) {
-  return '@startuml\n' + problem.classes.map(c => `class ${c.name} {\n${c.attributes.map(a => `- ${a}: String`).join('\n')}\n}`).join('\n') + '\n' + problem.relations.map(([a,b,ma,mb]) => `${a} "${ma}" -- "${mb}" ${b}`).join('\n') + '\n@enduml'
+function answer(problem, additions = []) {
+  return '@startuml\n' + problem.classes.map(c => `class ${c.name} {\n${c.attributes.map(a => `- ${a}: String`).join('\n')}\n}`).join('\n') + '\n' + [...problem.relations.map(([a,b,ma,mb]) => `${a} "${ma}" -- "${mb}" ${b}`), ...additions].join('\n') + '\n@enduml'
 }
-for (const problem of problems.filter(p => !p.lesson)) {
+for (const problem of problems.filter(p => !p.lesson && !p.relationAlternatives)) {
   test(`${problem.id}: correct source passes, empty source fails`, () => {
     assert.ok(judge(fromPlantUml(answer(problem)), problem).every(r => r.passed))
     assert.ok(judge(fromPlantUml(emptySource), problem).every(r => !r.passed))
@@ -26,6 +27,34 @@ for (const problem of problems.filter(p => !p.lesson)) {
     assert.ok(judge(model, problem).every(r => r.passed))
   })
 }
+
+const manuscript = problems.find(p => p.id === 'manuscript-reviews')
+const direct = 'Revision "1" -- "0..*" Comment'
+const throughReview = ['class Review', 'Review "0..*" -- "1" Revision', 'Review "1" -- "0..*" Comment']
+const gradeManuscript = (lines) => judge(fromPlantUml(answer(manuscript, lines)), manuscript)
+test('manuscript-reviews: both solutions pass in PlantUML and Mermaid', () => {
+  for (const lines of [[direct], throughReview]) {
+    assert.ok(gradeManuscript(lines).every(r => r.passed))
+    const mermaid = toMermaid(parsePlantUml(answer(manuscript, lines)))
+    assert.ok(judge(fromDiagram(parseMermaid(mermaid)), manuscript).every(r => r.passed))
+  }
+})
+test('manuscript-reviews: ambiguous paths and misplaced comments fail', () => {
+  const wrong = [
+    ['Manuscript "1" -- "0..*" Comment'],
+    ['Revision "0..*" -- "0..*" Comment'],
+    [direct, 'Comment "0..*" -- "2" Revision'],
+    [direct, ...throughReview],
+    [direct, 'Manuscript "1" -- "0..*" Comment'],
+    throughReview.slice(0, 2),
+    ['interface Review', ...throughReview.slice(1)],
+  ]
+  for (const lines of wrong) {
+    const report = gradeManuscript(lines)
+    assert.deepEqual(report.filter(r => !r.passed).map(r => r.id), ['comment-revision-path'], lines.join('\n'))
+  }
+  assert.throws(() => gradeManuscript(['Revision "1" ..> "0..*" Comment']), /暂不支持转换关系类型/)
+})
 test('invalid syntax throws', () => assert.throws(() => fromPlantUml('@startuml\nclass {\n@enduml')))
 test('operations cannot replace attributes', () => {
   const problem = problems.find(p => p.id === 'project-management')

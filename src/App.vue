@@ -569,7 +569,8 @@ onBeforeUnmount(() => {
             <div v-if="problem.classes.some(c => c.attributes.length)" class="test-line check-line"><Check :size="14" />题目指定的属性存在</div>
             <div v-if="problem.relations.length" class="test-line check-line"><Check :size="14" />普通关联类型</div>
             <div v-if="problem.relations.some(r => r[2] !== null)" class="test-line check-line"><Check :size="14" />关联两端多重性</div>
-            <div class="test-line">不检查属性类型、可见性、布局；名称不区分大小写，允许额外元素。</div>
+            <div v-if="problem.relationAlternatives" class="test-line check-line"><Check :size="14" />{{ problem.relationAlternatives.title }}</div>
+            <div class="test-line">不检查属性类型、可见性、布局；名称不区分大小写，额外元素须符合题目限制。</div>
             <div class="test-line">草稿保存在当前浏览器中。正式画布和源码自动同步；不支持的内容会暂停同步与评测，并保留原内容。画布的语义修改会重新生成源码，可能改变注释和排版。</div>
           </div>
         </details>
