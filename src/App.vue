@@ -3,7 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, toRaw, watch } fro
 import {
   ArrowDown, ArrowLeft, ArrowLeftRight, ArrowRight, ArrowUp, BookOpen,
   Check, ChevronDown, ChevronRight, ChevronUp, Circle, ClipboardCheck,
-  CodeXml, CornerDownLeft, FileCode2, FileText, Moon, Network, Play, Sun, X,
+  CodeXml, CornerDownLeft, FileCode2, FileText, Moon, Network, Play, Search, Sun, X,
   setLucideProps,
 } from '@lucide/vue'
 import { emptySource, problems } from './problems'
@@ -69,12 +69,33 @@ const challenges = problems.filter(p => !p.lesson)
 type Section = 'tutorial' | 'challenge'
 const section = computed<Section>(() => problem.value.lesson ? 'tutorial' : 'challenge')
 const sectionProblems = computed(() => section.value === 'tutorial' ? lessons : challenges)
+const catalogQuery = ref('')
+const catalogFilter = ref<'all' | 'remaining' | 'completed'>('all')
+const catalogFilters = [
+  { id: 'all', label: '全部' },
+  { id: 'remaining', label: '未完成' },
+  { id: 'completed', label: '已完成' },
+] as const
+const catalogEntries = computed(() => {
+  const query = catalogQuery.value.trim().toLowerCase()
+  return sectionProblems.value.map((item, index) => ({ item, index })).filter(({ item }) => {
+    if (catalogFilter.value !== 'all' && completed.value.has(item.id) !== (catalogFilter.value === 'completed')) return false
+    return !query || [item.title, item.description, item.level].some(text => text.toLowerCase().includes(query))
+  })
+})
+function resetCatalogFilters() {
+  catalogQuery.value = ''
+  catalogFilter.value = 'all'
+}
 const lastSelected: Record<Section, string> = { tutorial: lessons[0].id, challenge: challenges[0].id }
 const nextProblem = computed(() => sectionProblems.value[sectionProblems.value.findIndex(p => p.id === selectedId.value) + 1])
 const challengeProgress = computed(() => challenges.filter(p => completed.value.has(p.id)).length)
 async function switchSection(target: Section) {
   if (!(await leaveCanvasSafely())) return
-  if (target !== section.value) openProblem(lastSelected[target])
+  if (target !== section.value) {
+    resetCatalogFilters()
+    openProblem(lastSelected[target])
+  }
   view.value = 'catalog'
   window.scrollTo({ top: 0 })
 }
@@ -92,6 +113,10 @@ const accepted = computed(() => !!results.value?.length && passed.value === resu
 const lessonProgress = computed(() => lessons.filter(p => completed.value.has(p.id)).length)
 const notice = ref('源码和本地画布共用同一份答案；画布编辑请先应用更改。')
 const passed = computed(() => results.value?.filter(r => r.passed).length ?? 0)
+const reportRows = computed(() => {
+  const rows = results.value ?? []
+  return [...rows.filter(r => !r.passed), ...rows.filter(r => r.passed)]
+})
 type Draft = { source: string; model: Diagram; sourceMode: boolean; syncedKey: string | null; sourceFormat?: SourceFormat; sourceVariants?: Partial<Record<SourceFormat, SourceVariant>>; evaluated?: boolean }
 const drafts = new Map<string, Draft>()
 const storageAvailable = ref(true)
@@ -503,7 +528,7 @@ onBeforeUnmount(() => {
 <template>
   <div class="app-shell" :class="{ 'in-workspace': view === 'workspace' }">
     <header class="topbar">
-      <div class="brand"><span class="brand-mark" aria-hidden="true">U</span><span>UML <b>OJ</b></span></div>
+      <div class="brand"><span class="brand-mark" aria-hidden="true"><Network /></span><span>UML <b>OJ</b></span></div>
       <nav class="section-nav" aria-label="练习分区">
         <button :class="{ active: section === 'tutorial' }" :aria-current="section === 'tutorial' ? 'page' : undefined" :disabled="transitioning" @click="switchSection('tutorial')">教学关卡</button>
         <button :class="{ active: section === 'challenge' }" :aria-current="section === 'challenge' ? 'page' : undefined" :disabled="transitioning" @click="switchSection('challenge')">正式挑战</button>
@@ -515,18 +540,29 @@ onBeforeUnmount(() => {
     </header>
     <main v-if="view === 'catalog'" class="catalog">
       <div class="catalog-heading">
-        <div><div class="eyebrow">{{ section === 'tutorial' ? 'UML 入门' : '独立练习' }}</div><h1>{{ section === 'tutorial' ? '教学关卡' : '正式题库' }}</h1><p>{{ section === 'tutorial' ? '从认识类到理解多重性，一关一个知识点。' : '根据业务需求独立建模，用测试验证你的答案。' }}</p></div>
-        <div class="catalog-progress"><strong>{{ section === 'tutorial' ? lessonProgress : challengeProgress }}<span> / {{ sectionProblems.length }}</span></strong><span>已完成</span></div>
+        <div class="catalog-intro"><div class="eyebrow"><span aria-hidden="true">{{ section === 'tutorial' ? '01' : '02' }}</span>{{ section === 'tutorial' ? 'UML 入门' : '独立练习' }}</div><h1>{{ section === 'tutorial' ? '教学关卡' : '正式题库' }}</h1><p>{{ section === 'tutorial' ? '从认识类到理解多重性，一关一个知识点。' : '读业务需求、画类图、交给测试用例检验。' }}</p></div>
+        <div class="catalog-progress">
+          <span class="catalog-progress-label">完成进度</span>
+          <strong>{{ section === 'tutorial' ? lessonProgress : challengeProgress }}<span> / {{ sectionProblems.length }}</span></strong>
+          <div class="catalog-meter" aria-hidden="true"><span v-for="n in sectionProblems.length" :key="n" :class="{ filled: n <= (section === 'tutorial' ? lessonProgress : challengeProgress) }"></span></div>
+        </div>
       </div>
       <div v-if="!storageAvailable" class="storage-warning" role="alert">浏览器存储不可用或草稿无法恢复。请导出答案；关闭或刷新页面可能丢失修改。</div>
       <section class="catalog-list" :aria-label="section === 'tutorial' ? '教学关卡列表' : '正式题目列表'">
-        <div class="catalog-list-head"><span>{{ section === 'tutorial' ? '学习路径' : '题目' }}</span><span>状态</span></div>
-        <article v-for="(p, i) in sectionProblems" :key="p.id" class="catalog-row">
-          <div class="catalog-number">{{ String(i + 1).padStart(2, '0') }}</div>
-          <div class="catalog-copy"><h2><button class="catalog-title" @click="enterProblem(p.id)">{{ p.title }}</button></h2><p>{{ p.description }}</p><span class="catalog-level">{{ p.level }}</span></div>
+        <div class="catalog-controls">
+          <div class="catalog-filters" role="group" aria-label="按完成状态筛选">
+            <button v-for="filter in catalogFilters" :key="filter.id" :aria-pressed="catalogFilter === filter.id" @click="catalogFilter = filter.id">{{ filter.label }}</button>
+          </div>
+          <label class="catalog-search"><Search :size="14" /><input v-model="catalogQuery" type="search" aria-label="搜索题目" placeholder="搜索题目" /></label>
+        </div>
+        <div class="catalog-list-head"><span>{{ section === 'tutorial' ? '学习路径' : '挑战列表' }}</span><span role="status">{{ catalogEntries.length }} 道题</span></div>
+        <article v-for="{ item: p, index } in catalogEntries" :key="p.id" class="catalog-row">
+          <div class="catalog-number">{{ String(index + 1).padStart(2, '0') }}</div>
+          <div class="catalog-copy"><span class="catalog-level">{{ p.level }}</span><h2><button class="catalog-title" @click="enterProblem(p.id)">{{ p.title }}</button></h2><p>{{ p.description }}</p></div>
           <div class="catalog-status" :class="{ done: completed.has(p.id) }"><Check v-if="completed.has(p.id)" :size="14" />{{ completed.has(p.id) ? '已完成' : '未完成' }}</div>
           <button class="catalog-enter" :aria-label="`${section === 'tutorial' ? '开始学习' : '开始作答'}：${p.title}`" @click="enterProblem(p.id)">{{ section === 'tutorial' ? '开始学习' : '开始作答' }} <ArrowRight :size="14" /></button>
         </article>
+        <div v-if="!catalogEntries.length" class="catalog-empty"><p>没有符合条件的题目。</p><button @click="resetCatalogFilters">清除搜索和筛选</button></div>
       </section>
       <p class="catalog-note">{{ storageAvailable ? '进度和草稿保存在当前浏览器中。' : '存储不可用，当前进度仅在本页有效。' }}</p>
     </main>
@@ -631,7 +667,7 @@ Example "1" -- "0..*" OtherExample</pre>
         <section v-if="results" class="results" aria-live="polite">
           <div class="result-head">
             <div><div class="eyebrow">评测结果</div><h2>{{ problem.title }} · 评测报告</h2></div>
-            <div class="score"><strong>{{ passed }}/{{ results.length }}</strong><span>测试通过</span></div>
+            <div class="score"><strong>{{ passed }}/{{ results.length }}</strong><span>{{ accepted ? '测试通过' : `${results.length - passed} 项待修正` }}</span></div>
           </div>
           <div class="verdict" :class="accepted ? 'accepted' : 'wrong'"><Check v-if="accepted" /><X v-else />{{ problem.lesson ? (accepted ? '本关通过！' : '再试一下，下面还有提示') : (accepted ? 'ACCEPTED' : 'WRONG ANSWER') }}</div>
           <div v-if="accepted && problem.lesson" class="lesson-complete">
@@ -639,7 +675,7 @@ Example "1" -- "0..*" OtherExample</pre>
             <button v-if="nextProblem" class="primary" @click="goNext">进入下一关 <ArrowRight /></button>
             <div v-else><b>全部教学已完成。</b><p>想独立练习时，可以从顶部的“正式挑战”进入题库；也可以留在这里复习。</p></div>
           </div>
-          <div v-for="r in results" :key="r.id" class="result-row">
+          <div v-for="r in reportRows" :key="r.id" class="result-row" :class="{ 'result-needs-fix': !r.passed }">
             <span class="result-icon" :class="r.passed ? 'ok' : 'fail'" aria-hidden="true"><Check v-if="r.passed" :size="14" /><X v-else :size="14" /></span>
             <div class="result-copy"><b>{{ r.title }}</b><small>{{ r.detail }}</small></div>
             <span class="result-state" :class="r.passed ? 'ok' : 'fail'">{{ r.passed ? 'PASS' : 'FAIL' }}</span>

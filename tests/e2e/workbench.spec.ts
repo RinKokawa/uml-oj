@@ -50,3 +50,14 @@ test('splitter adjusts statement width by keyboard and pointer without losing so
   expect(Number(await separator.getAttribute('aria-valuenow'))).toBeLessThan(34)
   await expect(source).toHaveValue('@startuml\nclass Example\n@enduml')
 })
+
+test('failed checks appear before passed checks in the report', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: '正式挑战', exact: true }).click()
+  await page.getByRole('button', { name: '开始作答：项目管理系统' }).click()
+  await page.getByRole('textbox', { name: 'PlantUML source' }).fill('@startuml\nclass Developer\n@enduml')
+  await page.getByRole('button', { name: '提交评测' }).click()
+  await expect(page.locator('.score')).toContainText('7 项待修正')
+  await expect(page.locator('.result-row').first()).toHaveClass(/result-needs-fix/)
+  await expect(page.locator('.result-row').last()).toContainText('PASS')
+})
