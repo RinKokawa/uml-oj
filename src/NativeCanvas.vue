@@ -10,6 +10,8 @@ const props = defineProps<{ diagram: Diagram; problemId: string; disabled: boole
 const emit = defineEmits<{ dirty: [value: boolean] }>()
 type Point = { x: number; y: number }
 const svg = ref<SVGSVGElement | null>(null)
+const relationButton = ref<HTMLButtonElement | null>(null)
+const relationPick = ref<{ source: string | null } | null>(null)
 const positions = ref<Record<string, Point>>({})
 const storageOk = ref(true)
 const selection = ref<{ kind: 'class' | 'relation'; index: number } | null>(null)
@@ -116,6 +118,7 @@ function cancel() {
 }
 function addNode(isInterface = false) {
   if (props.disabled || !canDiscard()) return
+  cancelRelationPick()
   const next = clone()
   const prefix = isInterface ? 'Interface' : 'Class'
   let i = 1
@@ -127,13 +130,37 @@ function addNode(isInterface = false) {
   setDirty(false); selection.value = null
   void nextTick(() => choose('class', next.classes.length - 1))
 }
-function addRelation() {
+function cancelRelationPick(restoreFocus = false) {
+  relationPick.value = null
+  error.value = ''
+  if (restoreFocus) void nextTick(() => relationButton.value?.focus({ preventScroll: true }))
+}
+function toggleRelationPick() {
+  if (relationPick.value) { cancelRelationPick(true); return }
   if (props.disabled || props.diagram.classes.length < 2 || !canDiscard()) return
+  selection.value = null
+  setDirty(false)
+  error.value = ''
+  relationPick.value = { source: null }
+}
+function useNode(index: number) {
+  const pick = relationPick.value
+  if (!pick) { choose('class', index); return }
+  if (props.disabled) return
+  const name = props.diagram.classes[index].name
+  if (!pick.source) { pick.source = name; return }
+  if (pick.source === name) return
   const next = clone()
-  next.relations.push({ source: next.classes[0].name, target: next.classes[1].name, type: 'ClassBidirectional', label: '', sourceMultiplicity: '', targetMultiplicity: '' })
+  next.relations.push({ source: pick.source, target: name, type: 'ClassBidirectional', label: '', sourceMultiplicity: '', targetMultiplicity: '' })
   if (!props.onApply(next)) { error.value = '无法同步源码，未添加关联。'; return }
-  setDirty(false); selection.value = null
+  cancelRelationPick()
   void nextTick(() => choose('relation', next.relations.length - 1))
+}
+function escapeRelationPick(event: KeyboardEvent) {
+  if (!relationPick.value) return
+  event.preventDefault()
+  event.stopPropagation()
+  cancelRelationPick(true)
 }
 function removeSelected() {
   if (!selection.value || props.disabled) return
@@ -172,7 +199,7 @@ function svgPoint(event: PointerEvent) {
   return new DOMPoint(event.clientX, event.clientY).matrixTransform(matrix.inverse())
 }
 function startDrag(event: PointerEvent, name: string, index: number) {
-  if (props.disabled || event.button !== 0) return
+  if (props.disabled || relationPick.value || event.button !== 0) return
   choose('class', index)
   if (!isSelected('class', index)) return
   // Pointer interaction selects the diagram node, not the text inside it.
@@ -223,8 +250,10 @@ function restorePending() {
   }
 }
 function beforeUnload(e: BeforeUnloadEvent) { if (dirty.value) { e.preventDefault(); e.returnValue = '' } }
-watch(() => props.problemId, () => { selection.value = null; dirty.value = false; emit('dirty', false); loadLayout(); void nextTick(restorePending) })
+watch(() => props.disabled, disabled => { if (disabled && relationPick.value) cancelRelationPick() })
+watch(() => props.problemId, () => { cancelRelationPick(); selection.value = null; dirty.value = false; emit('dirty', false); loadLayout(); void nextTick(restorePending) })
 watch(() => props.diagram, () => {
+  if (relationPick.value) cancelRelationPick()
   if (!selection.value || dirty.value) return
   const { kind, index } = selection.value
   if (index >= (kind === 'class' ? props.diagram.classes.length : props.diagram.relations.length)) { selection.value = null; return }
@@ -238,24 +267,26 @@ defineExpose({ hasPending: () => dirty.value, getLayout: () => structuredClone(t
 </script>
 
 <template>
-  <div class="native-canvas">
+  <div class="native-canvas" @keydown.esc="escapeRelationPick">
     <div class="canvas-toolbar">
       <button :disabled="disabled" @click="addNode(false)"><Plus :size="14" /> 添加类</button>
       <button :disabled="disabled" @click="addNode(true)"><Plus :size="14" /> 添加接口</button>
-      <button :disabled="disabled || diagram.classes.length < 2" @click="addRelation"><Link2 :size="14" /> 添加关联</button>
-      <span>拖动类或接口调整位置，点击节点或连线编辑</span>
+      <button ref="relationButton" :disabled="disabled || diagram.classes.length < 2" :aria-pressed="!!relationPick" @click="toggleRelationPick"><Link2 :size="14" /> {{ relationPick ? '取消连线' : '添加关联' }}</button>
+      <span v-if="relationPick" class="connection-hint" role="status">{{ relationPick.source ? `起点：${relationPick.source}。请选择终点（Esc 取消）` : '请选择起点（Esc 取消）' }}</span>
+      <span v-else>拖动类或接口调整位置，点击节点或连线编辑</span>
+      <span v-if="relationPick && error" class="inspector-error" role="alert">{{ error }}</span>
     </div>
     <div v-if="!storageOk" class="canvas-storage-warning" role="alert">画布布局无法读取或保存；请下载草稿备份。</div>
-    <div class="canvas-workspace">
+    <div class="canvas-workspace" :class="{ connecting: relationPick }">
     <div class="canvas-scroll">
       <svg ref="svg" class="diagram-svg" viewBox="0 0 1000 600" aria-label="类图画布" @pointermove="moveDrag" @pointerup="endDrag" @pointercancel="endDrag">
         <defs><marker id="native-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10" fill="none" stroke="currentColor" /></marker></defs>
-        <g v-for="(r, i) in diagram.relations" :key="`r-${i}`" class="canvas-edge" :class="{ selected: isSelected('relation', i) }" role="button" tabindex="0" :aria-label="`编辑关联 ${r.source} 到 ${r.target}`" @click="choose('relation', i)" @keydown.enter.prevent="choose('relation', i)" @keydown.space.prevent="choose('relation', i)">
+        <g v-for="(r, i) in diagram.relations" :key="`r-${i}`" class="canvas-edge" :class="{ selected: isSelected('relation', i) }" role="button" tabindex="0" :aria-label="`编辑关联 ${r.source} 到 ${r.target}`" @click="!relationPick && choose('relation', i)" @keydown.enter.prevent="!relationPick && choose('relation', i)" @keydown.space.prevent="!relationPick && choose('relation', i)">
           <template v-if="!line(i).self"><circle class="edge-handle" :cx="(line(i).x1 + line(i).x2) / 2" :cy="(line(i).y1 + line(i).y2) / 2" r="5"/><line class="edge-hit" :x1="line(i).x1" :y1="line(i).y1" :x2="line(i).x2" :y2="line(i).y2"/><line class="edge-line" :x1="line(i).x1" :y1="line(i).y1" :x2="line(i).x2" :y2="line(i).y2" :marker-end="r.type === 'ClassUnidirectional' ? 'url(#native-arrow)' : undefined" />
             <text :x="line(i).x1 * .8 + line(i).x2 * .2" :y="line(i).y1 * .8 + line(i).y2 * .2 - 8">{{ r.sourceMultiplicity }}</text><text :x="line(i).x1 * .2 + line(i).x2 * .8" :y="line(i).y1 * .2 + line(i).y2 * .8 - 8">{{ r.targetMultiplicity }}</text><text :x="(line(i).x1 + line(i).x2) / 2" :y="(line(i).y1 + line(i).y2) / 2 + 16">{{ r.label }}</text>
           </template><template v-else><path class="edge-line" :d="`M ${line(i).x1} ${line(i).y1} c -60 -70 60 -70 1 0`"/><text :x="line(i).x1" :y="line(i).y1 - 52">{{ r.sourceMultiplicity }} / {{ r.targetMultiplicity }} {{ r.label }}</text></template>
         </g>
-        <g v-for="(c, i) in diagram.classes" :key="c.name" class="canvas-node" :class="{ selected: isSelected('class', i), disabled }" :transform="`translate(${position(c.name, i).x} ${position(c.name, i).y})`" role="button" tabindex="0" :aria-pressed="isSelected('class', i)" :aria-label="`编辑${c.kind === 'interface' ? '接口' : '类'} ${c.name}`" @pointerdown="startDrag($event, c.name, i)" @click="choose('class', i)" @keydown.enter.prevent="choose('class', i)" @keydown.space.prevent="choose('class', i)">
+        <g v-for="(c, i) in diagram.classes" :key="c.name" class="canvas-node" :class="{ selected: isSelected('class', i), disabled, 'connection-source': relationPick?.source === c.name }" :transform="`translate(${position(c.name, i).x} ${position(c.name, i).y})`" role="button" tabindex="0" :aria-pressed="relationPick ? relationPick.source === c.name : isSelected('class', i)" :aria-label="relationPick ? (relationPick.source === c.name ? `当前起点 ${c.name}` : `选为${relationPick.source ? '终点' : '起点'} ${c.name}`) : `编辑${c.kind === 'interface' ? '接口' : '类'} ${c.name}`" @pointerdown="startDrag($event, c.name, i)" @click="useNode(i)" @keydown.enter.prevent="useNode(i)" @keydown.space.prevent="useNode(i)">
           <rect class="node-outline" x="-5" y="-5" width="210" :height="height(i) + 10" rx="7" aria-hidden="true"/><rect class="node-body" width="200" :height="height(i)" rx="4"/><line x1="0" :y1="headerHeight(i)" x2="200" :y2="headerHeight(i)"/><text v-if="c.kind === 'interface'" x="100" y="17" text-anchor="middle" class="node-stereotype">&lt;&lt;interface&gt;&gt;</text><text x="100" :y="headerHeight(i) - 10" text-anchor="middle" class="node-title">{{ c.name }}</text><text v-for="(a, n) in c.attributes" :key="`a-${n}`" x="10" :y="headerHeight(i) + 20 + n * 18">{{ a }}</text><text v-for="(m, n) in c.methods" :key="`m-${n}`" x="10" :y="headerHeight(i) + 20 + (c.attributes.length + n) * 18">{{ m }}</text>
         </g>
         <text v-if="!diagram.classes.length" x="40" y="48" class="canvas-hint">点击“添加类”或“添加接口”开始建模</text>

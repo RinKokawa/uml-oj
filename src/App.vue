@@ -44,6 +44,11 @@ const results = ref<TestResult[] | null>(null)
 const error = ref('')
 const view = ref<'catalog' | 'workspace'>('catalog')
 const sourceMode = ref(true)
+const canvasFocus = ref(false)
+const sourceVisible = computed(() => isNarrow.value ? sourceMode.value : !canvasFocus.value)
+function toggleCanvasFocus() {
+  canvasFocus.value = !canvasFocus.value
+}
 const canvas = ref<InstanceType<typeof NativeCanvas> | null>(null)
 const canvasDirty = ref(false)
 const sourceElement = ref<HTMLTextAreaElement | null>(null)
@@ -569,6 +574,7 @@ onBeforeUnmount(() => {
           <div class="workspace-title"><h2>开始建模</h2></div>
           <div class="toolbar">
             <button class="secondary problem-toggle" :aria-expanded="problemVisible" aria-controls="problem-panel" @click="toggleProblemPanel">{{ problemVisible ? '收起题面' : '显示题面' }}</button>
+            <button v-if="!isNarrow" class="secondary" :aria-expanded="sourceVisible" aria-controls="source-pane" @click="toggleCanvasFocus">{{ canvasFocus ? '显示源码' : '专注画布' }}</button>
             <button class="secondary" title="下载当前源码与画布的原始草稿；不要求两边已经同步" @click="downloadDraftBackup">备份草稿</button>
             <button class="secondary export-button" :disabled="transitioning" @click="exportJson">导出 JSON</button>
             <button class="primary submit-button" :disabled="transitioning" aria-keyshortcuts="Control+Enter Meta+Enter" @click="runTests"><Play :size="14" /> 提交评测 <kbd aria-hidden="true">Ctrl <CornerDownLeft :size="12" /></kbd></button>
@@ -581,12 +587,12 @@ onBeforeUnmount(() => {
           </div>
           <span class="sync-indicator"><ArrowLeftRight /> 自动同步</span>
         </div>
-        <div class="editor-panes">
+        <div class="editor-panes" :class="{ 'canvas-focus': canvasFocus && !isNarrow }">
           <div v-show="!isNarrow || !sourceMode" class="visual-pane">
             <div class="pane-heading">可视化画布 <span v-if="syncState !== 'synced'" class="stale-label">{{ syncState === 'canvas-error' ? '请修正画布' : '画布未同步' }}</span></div>
             <NativeCanvas ref="canvas" :diagram="answer" :problem-id="selectedId" :disabled="syncState !== 'synced' || transitioning" :on-apply="applyCanvasChange" @dirty="onCanvasDirty" />
           </div>
-          <div v-show="!isNarrow || sourceMode" class="source-wrap">
+          <div id="source-pane" v-show="sourceVisible" class="source-wrap">
             <div class="source-label"><span class="icon-label"><FileCode2 class="file-icon" :size="14" />{{ sourceFormat === 'plantuml' ? 'solution.puml' : 'solution.mmd' }}</span><label>源码格式 <select :value="sourceFormat" aria-label="源码格式" :disabled="transitioning" @change="changeSourceFormat"><option value="plantuml">PlantUML</option><option value="mermaid">Mermaid</option></select></label></div>
             <textarea ref="sourceElement" v-model="source" spellcheck="false" :readonly="syncState === 'canvas-error' || syncState === 'conflict' || canvasDirty" :aria-label="sourceFormat === 'plantuml' ? 'PlantUML source' : 'Mermaid source'"></textarea>
             <details class="source-note"><summary><ChevronRight class="disclosure-icon" :size="14" />查看语法提示（不是本题答案）</summary>

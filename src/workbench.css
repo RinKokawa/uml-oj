@@ -93,3 +93,12 @@ html[data-theme="dark"] .feedback-toggle { color: #eee; }
 html[data-theme="dark"] .feedback-toggle:hover { background: #292e34; }
 html[data-theme="dark"] .feedback-empty { color: #a7a9ad; }
 html[data-theme="dark"] .panel-icon { color: #3498db; }
+
+@media (min-width: 761px) {
+  .editor-panes.canvas-focus { grid-template-columns: minmax(0, 1fr); }
+  .canvas-focus .visual-pane { border-right: 0; }
+  .canvas-focus .canvas-inspector {
+    position: static; flex: 0 0 min(280px, 42%); width: auto; box-shadow: none;
+  }
+  .canvas-focus .inspector-enter-active, .canvas-focus .inspector-leave-active { transition: none; }
+}
