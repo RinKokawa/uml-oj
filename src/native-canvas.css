@@ -13,8 +13,11 @@ html[data-theme="dark"] .native-canvas { background:#1d2025; }
 .canvas-toolbar button:disabled, .canvas-inspector button:disabled { opacity:.45; cursor:not-allowed; }
 .canvas-toolbar button:not(:disabled):hover, .canvas-inspector button:not(:disabled):hover { border-color:#3498db; color:#3498db; }
 .canvas-workspace { position:relative; display:flex; flex:1 1 0; min-width:0; min-height:0; overflow:hidden; }
-.canvas-scroll { flex:1 1 0; min-width:0; min-height:160px; overflow:hidden; background-color:#f6f8fb; background-image:radial-gradient(#cad4df 1px,transparent 1px); background-size:16px 16px; }
-.diagram-svg { display:block; width:100%; height:100%; min-height:160px; color:#506275; cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none; }
+.canvas-scroll { flex:1 1 0; min-width:0; min-height:160px; overflow:auto; background-color:#f6f8fb; background-image:radial-gradient(#cad4df 1px,transparent 1px); background-size:16px 16px; }
+.diagram-svg { display:block; width:100%; min-width:0; height:100%; min-height:160px; color:#506275; cursor:grab; user-select:none; -webkit-user-select:none; }
+@media (max-width:760px) { .diagram-svg { min-width:720px; height:auto; min-height:100%; } }
+.canvas-node, .canvas-node .node-body, .canvas-node line { touch-action:none; }
+@media (max-width:760px) { .diagram-svg { touch-action:auto; } }
 .diagram-svg.panning { cursor:grabbing; }
 .diagram-svg:focus-visible { outline:2px solid #3498db; outline-offset:-2px; }
 .viewport-controls { position:absolute; z-index:3; left:10px; bottom:10px; display:flex; align-items:center; gap:2px; padding:3px; border:1px solid var(--line); border-radius:6px; background:var(--surface); box-shadow:0 2px 8px #0003; }
@@ -49,6 +52,7 @@ html[data-theme="dark"] .class-icon-badge { color:#7fc7f5; } html[data-theme="da
 .connection-hit { fill:transparent; } .connection-dot { fill:#fff; stroke:#2186cc; stroke-width:2; pointer-events:none; }
 .connection-port:hover .connection-dot, .connection-port:focus-visible .connection-dot, .connection-port.active .connection-dot { fill:#2186cc; stroke:#93d2fa; stroke-width:3; }
 .canvas-workspace.connecting .canvas-inspector { visibility:hidden; pointer-events:none; }
+@media (min-width:761px) { .canvas-focus .canvas-workspace, .canvas-focus .canvas-scroll { min-width:0; } }
 html[data-theme="dark"] .connection-dot { fill:#1d2025; stroke:#62bdf4; }
 html[data-theme="dark"] .connection-port:hover .connection-dot, html[data-theme="dark"] .connection-port:focus-visible .connection-dot, html[data-theme="dark"] .connection-port.active .connection-dot { fill:#62bdf4; stroke:#d5efff; }
 .edge-triangle { fill:#f6f8fb; } html[data-theme="dark"] .edge-triangle { fill:#191c21; }

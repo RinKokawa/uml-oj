@@ -36,7 +36,11 @@ const error = ref('')
 const stagedMismatch = ref(false)
 let rawPending: string | null = null
 const clone = () => structuredClone(toRaw(props.diagram))
-const position = (name: string, index: number): Point => positions.value[name] ?? { x: 50 + (index % 3) * 245, y: 65 + Math.floor(index / 3) * 170 }
+const position = (name: string, index: number): Point => {
+  if (positions.value[name]) return positions.value[name]
+  const columns = typeof window !== 'undefined' && window.innerWidth <= 760 ? 3 : 2
+  return { x: 35 + (index % columns) * 245, y: 65 + Math.floor(index / columns) * 125 }
+}
 const classPoint = (name: string) => {
   const index = props.diagram.classes.findIndex(c => c.name === name)
   return position(name, Math.max(index, 0))
@@ -306,13 +310,23 @@ function onSvgPointerDown(event: PointerEvent) {
   if (keyboardConnection.value) { keyboardConnection.value = null; showConnectionNotice('') }
   if (!dragging && !connecting.value) viewport.pointerDown(event)
 }
+function onSvgClick(event: MouseEvent) {
+  if (window.innerWidth > 760 || props.disabled || relationPick.value || dragging || connecting.value || event.target !== svg.value) return
+  const point = svgPoint(event as unknown as PointerEvent)
+  if (!point) return
+  const index = props.diagram.classes.findIndex((c, i) => {
+    const p = position(c.name, i)
+    return point.x >= p.x && point.x <= p.x + 200 && point.y >= p.y && point.y <= p.y + height(i)
+  })
+  if (index >= 0) choose('class', index)
+}
 function svgPoint(event: PointerEvent) {
   const matrix = svg.value?.getScreenCTM()
   if (!matrix) return null
   return new DOMPoint(event.clientX, event.clientY).matrixTransform(matrix.inverse())
 }
 function startDrag(event: PointerEvent, name: string, index: number) {
-  if (props.disabled || relationPick.value || connecting.value || viewport.isInteracting() || event.button !== 0) return
+  if (props.disabled || relationPick.value || connecting.value || event.button !== 0) return
   choose('class', index)
   if (!isSelected('class', index)) return
   // Pointer interaction selects the diagram node, not the text inside it.
@@ -409,7 +423,7 @@ defineExpose({ hasPending: () => dirty.value, getLayout: () => structuredClone(t
     <div class="canvas-workspace" :class="{ connecting: !!relationPick || !!connecting || !!keyboardConnection }">
     <div v-if="connectionNotice" class="connection-notice" role="status">{{ connectionNotice }}</div>
     <div class="canvas-scroll">
-      <svg ref="svg" class="diagram-svg" :class="{ panning }" :viewBox="viewBox" tabindex="0" aria-label="类图画布" aria-description="拖动空白处平移，滚轮或加减键缩放，方向键平移，0 重置视图" @wheel.prevent="!connecting && viewport.onWheel($event)" @keydown="viewport.onKeydown" @keydown.esc.stop="onConnectionKeydown" @pointerdown="onSvgPointerDown" @pointermove="moveDrag($event); moveConnection($event); viewport.pointerMove($event)" @pointerup="endDrag($event); endConnection($event); viewport.pointerEnd($event)" @pointercancel="endDrag($event); endConnection($event); viewport.pointerEnd($event)" @lostpointercapture="endDrag($event); endConnection($event); viewport.pointerEnd($event)">
+      <svg ref="svg" class="diagram-svg" :class="{ panning }" :viewBox="viewBox" tabindex="0" aria-label="类图画布" aria-description="拖动空白处平移，滚轮或加减键缩放，方向键平移，0 重置视图" @wheel.prevent="!connecting && viewport.onWheel($event)" @keydown="viewport.onKeydown" @keydown.esc.stop="onConnectionKeydown" @pointerdown="onSvgPointerDown" @pointermove="moveDrag($event); moveConnection($event); viewport.pointerMove($event)" @pointerup="endDrag($event); endConnection($event); viewport.pointerEnd($event)" @pointercancel="endDrag($event); endConnection($event); viewport.pointerEnd($event)" @lostpointercapture="endDrag($event); endConnection($event); viewport.pointerEnd($event)" @click="onSvgClick">
         <defs>
           <marker id="native-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10" fill="none" stroke="currentColor" /></marker>
           <marker id="native-triangle" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="10" markerHeight="10" orient="auto"><path class="edge-triangle" d="M 1 1 L 11 6 L 1 11 Z" stroke="currentColor" /></marker>

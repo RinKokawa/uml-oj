@@ -51,7 +51,7 @@ const editorBounds = computed(() => {
   const available = editorWidth.value - 8
   if (available <= 360) return { min: 20, max: 80 }
   const min = Math.max(5, Math.ceil(200 / available * 100))
-  const max = Math.min(95, Math.floor((available - 160) / available * 100))
+  const max = Math.min(95, Math.floor((available - 170) / available * 100))
   return { min: Math.min(min, max), max }
 })
 const canvasPercent = computed(() => Math.max(editorBounds.value.min, Math.min(editorBounds.value.max, canvasWidth.value)))
@@ -281,6 +281,7 @@ function stopWorkbenchSplit(event: PointerEvent, split: WorkbenchSplit) {
   if (split === 'canvas') saveEditorSplit()
 }
 function keyboardWorkbenchSplit(event: KeyboardEvent, split: WorkbenchSplit) {
+  if (split === 'canvas' && editorPanes.value) editorWidth.value = editorPanes.value.getBoundingClientRect().width
   const [increase, decrease, current, step] = split === 'canvas'
     ? ['ArrowRight', 'ArrowLeft', canvasPercent.value, 2] as const
     : ['ArrowUp', 'ArrowDown', reportPercent.value, 4] as const

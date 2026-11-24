@@ -72,6 +72,8 @@ html[data-theme="dark"] .drawio-loading a { color: #54b4ef; }
   .in-workspace .feedback-anchor.expanded { flex: 0 0 clamp(170px, 32%, 330px); min-height: 0; }
 }
 @media (max-width: 760px) {
+  .diagram-svg { transform: scale(.71); transform-origin: top left; }
+
   .problem-panel { padding: 0; }
   .problem-scroll { overflow: visible; padding: 16px 18px 22px; }
   .panel-resizer { display: none !important; }
@@ -104,6 +106,8 @@ html[data-theme="dark"] .panel-icon { color: #3498db; }
     position: static; flex: 0 0 min(280px, 42%); width: auto; box-shadow: none;
   }
   .canvas-focus .inspector-enter-active, .canvas-focus .inspector-leave-active { transition: none; }
+  .canvas-focus .canvas-inspector.inspector-enter-from { transform: none; opacity: 1; }
+  .canvas-focus .diagram-svg { transform: scale(.85); transform-origin: top left; }
 }
 
 @media (min-width: 761px) {

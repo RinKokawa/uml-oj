@@ -80,7 +80,7 @@ export function judge(model: Model, problem: Problem): TestResult[] {
     const counts = [ma === null ? '' : `${a} 端 ${ma}`, mb === null ? '' : `${b} 端 ${mb}`].filter(Boolean).join('，')
     check(`mult-${a}-${b}`, counts,
       edges.some(e => (ma === null || multiplicity(e.sourceMultiplicity) === multiplicity(ma)) && (mb === null || multiplicity(e.targetMultiplicity) === multiplicity(mb))),
-      `请在同一条普通关联中填写：${counts}。`)
+      `请在同一条普通关联的 ${counts.replaceAll('端 ', '端填写 ')}。`)
   }
 
   if (problem.relationAlternatives) {

@@ -16,8 +16,8 @@ test('all six original exercises can be solved and graded, and old simplified co
   await page.goto('/')
   await page.getByRole('button', { name: '正式挑战', exact: true }).click()
   const catalog = page.getByRole('region', { name: '正式题目列表' })
-  await expect(catalog.locator('article')).toHaveCount(8)
-  await expect(page.locator('.catalog-progress')).toContainText('0 / 8')
+  await expect(catalog.locator('article')).toHaveCount(11)
+  await expect(page.locator('.catalog-progress')).toContainText('0 / 11')
   await expect(catalog.locator('article').filter({ hasText: '都灵练习：大学' })).toContainText('未完成')
   await catalog.getByRole('button', { name: '开始作答：都灵练习：大学', exact: true }).click()
   await expect(page.locator('.problem-source')).toContainText('原题题意的中文翻译')
@@ -38,7 +38,7 @@ test('all six original exercises can be solved and graded, and old simplified co
   await page.reload()
   await expect(page.getByRole('textbox', { name: 'PlantUML source' })).toHaveValue(/class Publication/)
   await page.getByRole('button', { name: '返回正式题库' }).click()
-  await expect(page.locator('.catalog-progress')).toContainText('6 / 8')
+  await expect(page.locator('.catalog-progress')).toContainText('6 / 11')
 })
 
 test('bank exercise can be completed using the canvas', async ({ page }) => {
