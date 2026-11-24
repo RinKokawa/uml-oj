@@ -12,7 +12,7 @@ test('UI uses decorative Lucide SVGs while controls keep their accessible names'
   await darkToggle.click()
 
   const enter = page.getByRole('button', { name: '开始学习：第 1 关：认识类', exact: true })
-  await expect(enter.locator('svg.lucide-arrow-right')).toBeVisible()
+  await expect(page.locator('.catalog-search svg.lucide-search')).toBeVisible()
   await enter.click()
   await expect(page.getByRole('button', { name: '返回教学关卡', exact: true }).locator('svg.lucide-arrow-left')).toBeVisible()
   await expect(page.getByRole('group', { name: '编辑方式' })).toHaveCount(0)
