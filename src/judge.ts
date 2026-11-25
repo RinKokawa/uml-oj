@@ -61,16 +61,26 @@ export function judge(model: Model, problem: Problem): TestResult[] {
     multiplicity(edge.sourceMultiplicity) === multiplicity(a) && multiplicity(edge.targetMultiplicity) === multiplicity(b)
 
   for (const required of problem.namedRelations ?? []) {
-    const edges = model.relations.flatMap(e => {
-      if (!e.association || normalize(e.label) !== normalize(required.label)) return []
-      if (normalize(e.source) === normalize(required.source) && normalize(e.target) === normalize(required.target)) return [e]
-      if (e.type === 'ClassBidirectional' && normalize(e.source) === normalize(required.target) && normalize(e.target) === normalize(required.source)) return [{ ...e, sourceMultiplicity: e.targetMultiplicity, targetMultiplicity: e.sourceMultiplicity }]
-      return []
+    const source = normalize(required.source)
+    const target = normalize(required.target)
+    const label = normalize(required.label)
+    const candidates = model.relations.filter(e => {
+      if (!e.association || normalize(e.label) !== label) return false
+      const from = normalize(e.source)
+      const to = normalize(e.target)
+      return (from === source && to === target) || (from === target && to === source)
     })
-    const found = edges.some(e => (!required.sourceMultiplicity || multiplicity(e.sourceMultiplicity) === multiplicity(required.sourceMultiplicity)) && (!required.targetMultiplicity || multiplicity(e.targetMultiplicity) === multiplicity(required.targetMultiplicity)))
+    const duplicate = required.unique && candidates.length > 1
+    const found = !duplicate && candidates.some(e => {
+      const reversed = normalize(e.source) !== source
+      if (reversed && e.type !== 'ClassBidirectional') return false
+      const [a, b] = reversed ? [e.targetMultiplicity, e.sourceMultiplicity] : [e.sourceMultiplicity, e.targetMultiplicity]
+      return (!required.sourceMultiplicity || multiplicity(a) === multiplicity(required.sourceMultiplicity))
+        && (!required.targetMultiplicity || multiplicity(b) === multiplicity(required.targetMultiplicity))
+    })
     const counts = [required.sourceMultiplicity ? `${required.source} 端 ${required.sourceMultiplicity}` : '', required.targetMultiplicity ? `${required.target} 端 ${required.targetMultiplicity}` : ''].filter(Boolean).join('、')
     check(`named-${required.source}-${required.target}-${required.label}`, `${required.source} 与 ${required.target} 的 ${required.label} 关联${counts ? `（${counts}）` : ''}`, found,
-      `请添加 ${required.source} 与 ${required.target} 的普通关联，关系名称为 ${required.label}${counts ? `；${counts}` : ''}。有方向的关联应从 ${required.source} 指向 ${required.target}。`)
+      duplicate ? `发现重复的 ${required.label} 关联；这两个端点之间同名的普通关联只能保留一条。` : `请添加 ${required.source} 与 ${required.target} 的普通关联，关系名称为 ${required.label}${counts ? `；${counts}` : ''}。有方向的关联应从 ${required.source} 指向 ${required.target}。`)
   }
 
   for (const [a, b, ma, mb] of problem.relations) {
