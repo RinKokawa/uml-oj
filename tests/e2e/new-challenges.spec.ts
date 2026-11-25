@@ -4,7 +4,7 @@ test('the new formal challenges are playable, including both manuscript models',
   await page.goto('/')
   await page.getByRole('button', { name: '正式挑战', exact: true }).click()
   const entries = page.getByRole('region', { name: '正式题目列表' }).locator('tbody tr')
-  await expect(entries).toHaveCount(11)
+  await expect(entries).toHaveCount(19)
   await entries.nth(2).getByRole('button', { name: /开始作答/ }).click()
   const question = page.getByLabel('选择正式关卡')
   const submit = page.getByRole('button', { name: '提交评测' })

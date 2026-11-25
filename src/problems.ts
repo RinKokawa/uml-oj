@@ -1,3 +1,4 @@
+import { modelingChallenges } from './modeling-challenges.ts'
 import { turinAssessments } from './turin-assessments.ts'
 
 type Relation = [string, string, string | null, string | null]
@@ -25,7 +26,7 @@ export type Problem = {
   namedRelations?: { source: string; target: string; label: string; sourceMultiplicity?: string; targetMultiplicity?: string }[]
   assessmentNote?: string
   hint: string
-  source?: { title: string; url: string; page: number; note: string }
+  source?: { title: string; url: string; page?: number; note: string }
   referenceOnly?: { missing: string[] }
   lesson?: {
     concept: string
@@ -336,7 +337,7 @@ const baseProblems: Problem[] = [
 ]
 
 // Keep original exercise statements distinct from the explicit OJ conventions.
-export const problems: Problem[] = baseProblems.map(problem => {
+export const problems: Problem[] = [...baseProblems, ...modelingChallenges].map(problem => {
   const assessment = turinAssessments[problem.id]
   return assessment ? { ...problem, ...assessment, level: '都灵原题 · 静态结构评测' } : problem
 })

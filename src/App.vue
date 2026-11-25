@@ -712,7 +712,7 @@ onBeforeUnmount(() => {
         <div class="problem-heading"><span class="problem-tag">{{ problem.lesson ? '循序练习' : problem.referenceOnly ? '原题参考' : '独立挑战' }}</span><span class="problem-level">{{ problem.level }}</span></div>
         <h1>{{ problem.title }}</h1>
         <p class="lead">{{ problem.description }}</p>
-        <p v-if="problem.source" class="problem-source">来源：<a :href="problem.source.url" target="_blank" rel="noopener noreferrer">{{ problem.source.title }}（第 {{ problem.source.page }} 页）</a>。{{ problem.source.note }}</p>
+        <p v-if="problem.source" class="problem-source">来源：<a :href="problem.source.url" target="_blank" rel="noopener noreferrer">{{ problem.source.title }}<template v-if="problem.source.page">（第 {{ problem.source.page }} 页）</template></a>。{{ problem.source.note }}</p>
         <section class="statement">
           <h2>{{ problem.lesson ? '本关任务' : '业务需求' }}</h2>
           <ol><li v-for="line in problem.requirements" :key="line">{{ line }}</li></ol>
@@ -749,6 +749,7 @@ onBeforeUnmount(() => {
         <details v-if="!problem.referenceOnly" class="hint"><summary><ChevronRight class="disclosure-icon" :size="14" />评测范围与草稿说明</summary>
           <div class="tests-info">
             <div class="test-line check-line"><Check :size="14" />{{ problem.classes.map(c => c.name).join('、') }} 类存在</div>
+            <div v-if="problem.interfaces?.length" class="test-line check-line"><Check :size="14" />题目指定的接口及方法名存在</div>
             <div v-if="problem.classes.some(c => c.attributes.length)" class="test-line check-line"><Check :size="14" />题目指定的属性存在</div>
             <div v-if="problem.relations.length || problem.namedRelations?.length" class="test-line check-line"><Check :size="14" />普通关联类型及题目指定的关系名称</div>
             <div v-if="problem.typedRelations?.length" class="test-line check-line"><Check :size="14" />继承、实现关系的类型和方向</div>

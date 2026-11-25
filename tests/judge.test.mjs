@@ -10,14 +10,15 @@ function answer(problem, additions = []) {
   const ordinary = problem.relations.map(([a,b,ma,mb]) => `${a}${ma === null ? '' : ` "${ma}"`} -- ${mb === null ? '' : `"${mb}" `}${b}`)
   const typed = (problem.typedRelations ?? []).map(r => `${r.source} ${r.type === 'ClassInheritance' ? '--|>' : '..|>'} ${r.target}`)
   const named = (problem.namedRelations ?? []).map(r => `${r.source}${r.sourceMultiplicity ? ` "${r.sourceMultiplicity}"` : ''} -- ${r.targetMultiplicity ? `"${r.targetMultiplicity}" ` : ''}${r.target} : ${r.label}`)
-  return '@startuml\n' + problem.classes.map(c => `class ${c.name} {\n${c.attributes.map(a => `- ${a}: String`).join('\n')}\n}`).join('\n') + '\n' + [...ordinary, ...typed, ...named, ...additions].join('\n') + '\n@enduml'
+  const interfaces = (problem.interfaces ?? []).map(i => `interface ${i.name} {\n${i.methods.map(m => `${m}()`).join('\n')}\n}`)
+  return '@startuml\n' + problem.classes.map(c => `class ${c.name} {\n${c.attributes.map(a => `- ${a}: String`).join('\n')}\n}`).join('\n') + '\n' + [...interfaces, ...ordinary, ...typed, ...named, ...additions].join('\n') + '\n@enduml'
 }
 for (const problem of problems.filter(p => !p.lesson && !p.referenceOnly && !p.relationAlternatives)) {
   test(`${problem.id}: correct source passes, empty source fails`, () => {
     assert.ok(judge(fromPlantUml(answer(problem)), problem).every(r => r.passed))
     assert.ok(judge(fromPlantUml(emptySource), problem).every(r => !r.passed))
   })
-  test(`${problem.id}: wrong ordinary relation type fails`, () => {
+  if (problem.relations.length) test(`${problem.id}: wrong ordinary relation type fails`, () => {
     const model = fromPlantUml(answer(problem))
     model.relations[0].association = false
     assert.ok(judge(model, problem).some(r => r.id.startsWith('rel-') && !r.passed))

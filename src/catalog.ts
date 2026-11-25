@@ -1,6 +1,6 @@
 import type { Problem } from './problems'
 
-export const catalogTopics = ['类与属性', '接口', '关联', '多重性', '继承', '命名关联', '业务记录', '版本建模'] as const
+export const catalogTopics = ['类与属性', '接口', '关联', '多重性', '继承', '命名关联', '业务记录', '版本建模', '设计模式'] as const
 type Topic = typeof catalogTopics[number]
 export const challengeLevels = ['入门', '中等', '进阶'] as const
 type Level = typeof challengeLevels[number]
@@ -31,6 +31,14 @@ const topicsByProblem: Record<string, readonly Topic[]> = {
   'turin-bank': ['关联', '继承', '业务记录'],
   'turin-hospital': ['类与属性', '关联', '多重性', '继承', '命名关联'],
   'turin-library': ['关联', '多重性', '命名关联', '业务记录'],
+  'modeling-company-board': ['关联', '多重性'],
+  'modeling-mentorship': ['多重性', '继承'],
+  'modeling-course-enrollment': ['关联', '多重性', '业务记录'],
+  'modeling-course-registration-interface': ['接口', '继承'],
+  'modeling-series-episodes': ['类与属性', '关联', '多重性'],
+  'modeling-warehouse-moves': ['继承', '命名关联', '多重性', '业务记录'],
+  'modeling-shipping-strategy': ['接口', '命名关联', '多重性', '设计模式'],
+  'modeling-scanner-adapter': ['接口', '命名关联', '设计模式'],
 }
 
 export function buildCatalog(items: readonly Problem[], completed: ReadonlySet<string>, attempted: ReadonlySet<string>) {
@@ -56,12 +64,13 @@ export function filterCatalog(entries: ReturnType<typeof buildCatalog>, filters:
   sort: 'number' | 'difficulty-asc' | 'difficulty-desc'
 }) {
   const q = filters.query.trim().toLowerCase()
+  const numberQuery = /^\d+$/.test(q) ? Number(q) : null
   const matches = entries.filter(entry =>
     (filters.status === 'all' || entry.status === filters.status) &&
     (filters.difficulty === 'all' || entry.difficulty === filters.difficulty) &&
     (filters.topic === 'all' || entry.topics.includes(filters.topic)) &&
-    (!q || [entry.number, String(entry.index + 1), entry.problem.title, entry.problem.description, entry.problem.level, ...entry.topics]
-      .some(text => text.toLowerCase().includes(q))),
+    (!q || (numberQuery !== null ? entry.index + 1 === numberQuery
+      : [entry.problem.title, entry.problem.description, entry.problem.level, ...entry.topics].some(text => text.toLowerCase().includes(q)))),
   )
   if (filters.sort !== 'number') {
     const direction = filters.sort === 'difficulty-asc' ? 1 : -1
