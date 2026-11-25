@@ -102,15 +102,15 @@ export const modelingChallenges: Problem[] = [
     requirements: [
       '建立 MovementLocation，货位 StorageSlot（slotNo）和装卸口 LoadingGate（gateNo）都继承它。',
       '建立移动记录 Movement（movedAt）和托盘 Pallet（barcode）。每次移动对应一个托盘，托盘可以没有移动历史，或对应多条记录。',
-      'Movement 与 MovementLocation 之间画两条普通关联，名称分别为 from 和 to；两个角色各指向一个位置。同一位置可出现在零到多条记录的起点，也可出现在零到多条记录的终点。',
+      'Movement 与 MovementLocation 之间画两条普通关联，名称分别为 from 和 to，每个名称只画一条；两个角色各指向一个位置。同一位置可出现在零到多条记录的起点，也可出现在零到多条记录的终点。',
       '两端都要标多重性。如果画有方向的关联，两条都从 Movement 指向 MovementLocation。不检查托盘当前库存或起止时间。',
     ],
     classes: [{ name: 'MovementLocation', attributes: [] }, { name: 'StorageSlot', attributes: ['slotNo'] }, { name: 'LoadingGate', attributes: ['gateNo'] }, { name: 'Movement', attributes: ['movedAt'] }, { name: 'Pallet', attributes: ['barcode'] }],
     relations: [['Movement', 'Pallet', '0..*', '1']],
     typedRelations: [{ source: 'StorageSlot', target: 'MovementLocation', type: 'ClassInheritance' }, { source: 'LoadingGate', target: 'MovementLocation', type: 'ClassInheritance' }],
     namedRelations: [
-      { source: 'Movement', target: 'MovementLocation', label: 'from', sourceMultiplicity: '0..*', targetMultiplicity: '1' },
-      { source: 'Movement', target: 'MovementLocation', label: 'to', sourceMultiplicity: '0..*', targetMultiplicity: '1' },
+      { source: 'Movement', target: 'MovementLocation', label: 'from', unique: true, sourceMultiplicity: '0..*', targetMultiplicity: '1' },
+      { source: 'Movement', target: 'MovementLocation', label: 'to', unique: true, sourceMultiplicity: '0..*', targetMultiplicity: '1' },
     ],
     hint: '起点和终点的元素类型相同，但语义不同。画两条边，并把名字填写到关系上。',
     source: umple('WarehouseSystem', 'Warehouse System'),

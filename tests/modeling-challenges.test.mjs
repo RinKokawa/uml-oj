@@ -32,3 +32,20 @@ for (const [id, title, answer, correct, incorrect, failingRule] of modelingFixtu
     assert.ok(failed.some(row => row.id === failingRule && !row.passed), failingRule)
   })
 }
+
+test('warehouse roles reject duplicate same-label edges, including a reversed duplicate', () => {
+  const [id, , answer] = modelingFixtures.find(([key]) => key === 'modeling-warehouse-moves')
+  const problem = problems.find(p => p.id === id)
+  for (const extra of [
+    'Movement "0..*" --> "0..1" MovementLocation : to',
+    'MovementLocation "0..1" --> "0..*" Movement : TO',
+    'MovementLocation "1" -- "0..*" Movement : to',
+  ]) {
+    const withDuplicate = parse(`${answer}\n${extra}`)
+    for (const diagram of [withDuplicate, parseMermaid(toMermaid(withDuplicate))]) {
+      const failures = judge(model(diagram), problem).filter(row => !row.passed)
+      assert.deepEqual(failures.map(row => row.id), ['named-Movement-MovementLocation-to'])
+      assert.match(failures[0].detail, /重复的 to 关联/)
+    }
+  }
+})

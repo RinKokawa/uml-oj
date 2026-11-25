@@ -33,6 +33,12 @@ for (const [id, title, answer, correct, incorrect] of modelingFixtures) {
     }
     await submit.click()
     await expect(page.locator('.verdict')).toHaveText('ACCEPTED')
+    if (id === 'modeling-warehouse-moves') {
+      await editor.fill(plantuml(answer + '\nMovementLocation "0..1" --> "0..*" Movement : to'))
+      await submit.click()
+      await expect(page.locator('.score strong')).toHaveText('14/15')
+      await expect(page.getByText('发现重复的 to 关联；这两个端点之间同名的普通关联只能保留一条。')).toBeVisible()
+    }
     await page.getByRole('button', { name: '返回正式题库' }).click()
     await expect(catalog.getByRole('row').filter({ has: start })).toContainText('已完成')
   })

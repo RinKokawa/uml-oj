@@ -23,7 +23,7 @@ export type Problem = {
     options: RelationAlternative[]
   }
   typedRelations?: { source: string; target: string; type: 'ClassInheritance' | 'ClassRealization' }[]
-  namedRelations?: { source: string; target: string; label: string; sourceMultiplicity?: string; targetMultiplicity?: string }[]
+  namedRelations?: { source: string; target: string; label: string; sourceMultiplicity?: string; targetMultiplicity?: string; unique?: boolean }[]
   assessmentNote?: string
   hint: string
   source?: { title: string; url: string; page?: number; note: string }
